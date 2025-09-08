@@ -11,6 +11,7 @@ export default function Orders() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [platformFilter, setPlatformFilter] = useState<string>('all')
+  const [originFilter, setOriginFilter] = useState<string>('all') // all, imported, webhook
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [startDate, setStartDate] = useState('')
@@ -23,6 +24,8 @@ export default function Orders() {
   const [selectedOrders, setSelectedOrders] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
+  const [deleteConfirmationText, setDeleteConfirmationText] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
 
@@ -71,8 +74,12 @@ export default function Orders() {
                          order.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
     const matchesPlatform = platformFilter === 'all' || order.platform_name?.toLowerCase() === platformFilter.toLowerCase()
-    return matchesSearch && matchesStatus && matchesPlatform
+    const matchesOrigin = originFilter === 'all' || 
+                         (originFilter === 'imported' && order.is_imported) ||
+                         (originFilter === 'webhook' && !order.is_imported)
+    return matchesSearch && matchesStatus && matchesPlatform && matchesOrigin
   })
+
 
   // Paginação
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
@@ -84,7 +91,7 @@ export default function Orders() {
   // Reset página quando filtros mudam
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, statusFilter, platformFilter, startDate, endDate, itemsPerPage])
+  }, [searchTerm, statusFilter, platformFilter, originFilter, startDate, endDate, itemsPerPage])
 
   const formatCurrency = (value?: number) => {
     if (!value) return 'R$ 0,00'
@@ -168,6 +175,41 @@ export default function Orders() {
         fetchOrders() // Recarregar para ver quais foram excluídos
       }
       
+      setBulkDeleting(false)
+    }
+  }
+
+  const handleFilterBasedDelete = async () => {
+    if (deleteConfirmationText !== 'excluir') {
+      alert('Digite "excluir" para confirmar a exclusão')
+      return
+    }
+
+    setBulkDeleting(true)
+    try {
+      // Pegar todos os IDs dos pedidos filtrados
+      const filteredIds = filteredOrders.map(order => order.id)
+      
+      const response = await fetch('/api/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventIds: filteredIds })
+      })
+
+      const result = await response.json()
+      
+      if (result.success) {
+        alert(`${result.deletedCount} registros excluídos com sucesso!`)
+        setShowBulkDeleteModal(false)
+        setDeleteConfirmationText('')
+        await fetchOrders() // Recarregar dados
+      } else {
+        alert('Erro ao excluir registros: ' + result.error)
+      }
+    } catch (error) {
+      console.error('Erro na exclusão baseada em filtros:', error)
+      alert('Erro ao excluir registros')
+    } finally {
       setBulkDeleting(false)
     }
   }
@@ -349,6 +391,15 @@ export default function Orders() {
                   <option value="voomp">🟣 Voomp</option>
                   <option value="cademi">🟡 Cademi</option>
                 </select>
+                <select
+                  className="w-full sm:w-auto px-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                  value={originFilter}
+                  onChange={(e) => setOriginFilter(e.target.value)}
+                >
+                  <option value="all">Todas as Origens</option>
+                  <option value="imported">📥 Importado (CSV)</option>
+                  <option value="webhook">🔗 Webhook (Tempo Real)</option>
+                </select>
               </div>
             </div>
 
@@ -415,6 +466,7 @@ export default function Orders() {
                     setSearchTerm('')
                     setStatusFilter('all')
                     setPlatformFilter('all')
+                    setOriginFilter('all')
                     setStartDate('')
                     setEndDate('')
                     setDateError('')
@@ -431,6 +483,16 @@ export default function Orders() {
                   >
                     <Trash2 className={`h-4 w-4 ${bulkDeleting ? 'animate-spin' : ''}`} />
                     {bulkDeleting ? 'Excluindo...' : `Excluir ${selectedOrders.length} selecionados`}
+                  </button>
+                )}
+                {(platformFilter !== 'all' || statusFilter !== 'all' || originFilter !== 'all' || searchTerm.trim() || startDate || endDate) && filteredOrders.length > 0 && (
+                  <button
+                    onClick={() => setShowBulkDeleteModal(true)}
+                    disabled={bulkDeleting}
+                    className="px-4 py-3 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors duration-200 whitespace-nowrap flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 className={`h-4 w-4 ${bulkDeleting ? 'animate-spin' : ''}`} />
+                    Excluir Filtrados ({filteredOrders.length})
                   </button>
                 )}
                 <button
@@ -701,6 +763,97 @@ export default function Orders() {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmação de exclusão em massa */}
+      {showBulkDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
+                <Trash2 className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Confirmação de Exclusão
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Esta ação não pode ser desfeita
+                </p>
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <p className="text-gray-700 mb-4">
+                Você está prestes a excluir <strong>{filteredOrders.length} registros</strong> que correspondem aos filtros ativos:
+              </p>
+              <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
+                {platformFilter !== 'all' && (
+                  <div>• <strong>Plataforma:</strong> {platformFilter}</div>
+                )}
+                {statusFilter !== 'all' && (
+                  <div>• <strong>Status:</strong> {statusFilter}</div>
+                )}
+                {originFilter !== 'all' && (
+                  <div>• <strong>Origem:</strong> {originFilter === 'imported' ? 'Importado (CSV)' : 'Webhook (Tempo Real)'}</div>
+                )}
+                {startDate && (
+                  <div>• <strong>Data início:</strong> {startDate}</div>
+                )}
+                {endDate && (
+                  <div>• <strong>Data fim:</strong> {endDate}</div>
+                )}
+                {searchTerm.trim() && (
+                  <div>• <strong>Busca:</strong> "{searchTerm}"</div>
+                )}
+              </div>
+            </div>
+
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Para confirmar, digite <strong>"excluir"</strong> no campo abaixo:
+              </label>
+              <input
+                type="text"
+                value={deleteConfirmationText}
+                onChange={(e) => setDeleteConfirmationText(e.target.value)}
+                placeholder="Digite: excluir"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                autoComplete="off"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowBulkDeleteModal(false)
+                  setDeleteConfirmationText('')
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={bulkDeleting}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleFilterBasedDelete}
+                disabled={deleteConfirmationText !== 'excluir' || bulkDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {bulkDeleting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Excluir {filteredOrders.length} Registros
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de detalhes do webhook */}
       {selectedOrder && (

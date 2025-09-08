@@ -495,23 +495,27 @@ function mapKiwifyStatus(status: string): string {
   const normalizedStatus = status.toLowerCase()
   
   // Mapeamento específico para status da Kiwify
-  if (normalizedStatus === 'paid') {
+  if (normalizedStatus === 'paid' || normalizedStatus === 'pago') {
     return 'paid'
   }
-  if (normalizedStatus === 'waiting_payment') {
+  if (normalizedStatus === 'approved' || normalizedStatus === 'aprovado') {
+    return 'paid' // Approved = Paid na Kiwify
+  }
+  if (normalizedStatus === 'waiting_payment' || normalizedStatus === 'aguardando_pagamento') {
     return 'pending'
   }
-  if (normalizedStatus === 'refunded') {
+  if (normalizedStatus === 'refunded' || normalizedStatus === 'reembolsado') {
     return 'refunded'
   }
-  if (normalizedStatus === 'canceled') {
+  if (normalizedStatus === 'canceled' || normalizedStatus === 'cancelado') {
     return 'canceled'
   }
   if (normalizedStatus === 'chargeback') {
     return 'chargeback'
   }
   
-  return 'paid' // default
+  console.log(`⚠️ Status não reconhecido da Kiwify: "${status}" - mapeando como pending`)
+  return 'pending' // Mudança: status não reconhecidos viram pending, não paid
 }
 
 function generateOrderId(): string {

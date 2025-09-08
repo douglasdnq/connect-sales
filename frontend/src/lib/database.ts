@@ -73,7 +73,36 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
     console.log(`Filtro fim: ${endDate} -> ${endDateTime.toISOString()}`)
   }
 
-  const { data, error } = await query.order('received_at', { ascending: false })
+  // Buscar todos os registros com paginação automática
+  let allData: any[] = []
+  let hasMore = true
+  let from = 0
+  const pageSize = 1000
+
+  while (hasMore) {
+    const { data: pageData, error: pageError } = await query
+      .order('received_at', { ascending: false })
+      .range(from, from + pageSize - 1)
+
+    if (pageError) return { data: null, error: pageError }
+
+    if (pageData && pageData.length > 0) {
+      allData = [...allData, ...pageData]
+      from += pageSize
+      hasMore = pageData.length === pageSize
+    } else {
+      hasMore = false
+    }
+
+    // Limite de segurança para evitar loop infinito
+    if (allData.length > 20000) {
+      console.warn('Limite de segurança atingido: 20.000 registros')
+      break
+    }
+  }
+
+  const data = allData
+  const error = null
 
   if (error) return { data: null, error }
 
@@ -89,9 +118,6 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
         const orderStatus = event.payload_json?.order_status?.toLowerCase()
         const webhookEvent = event.payload_json?.webhook_event_type?.toLowerCase()
         
-        // Debug do status
-        console.log(`Status debug - order_status: ${orderStatus}, webhook_event_type: ${webhookEvent}`)
-        
         // Mapear status baseado nos campos da Kiwify
         if (orderStatus === 'approved' || webhookEvent?.includes('approved')) return 'paid'
         if (orderStatus === 'paid' || webhookEvent?.includes('paid')) return 'paid'
@@ -101,6 +127,8 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
         
         return 'pending' // default
       })(),
+      original_status: event.payload_json?.order_status || event.payload_json?.webhook_event_type || 'unknown', // Para debug
+      csv_status: event.import_tag ? 'from_csv' : 'from_webhook', // Identificar origem
       gross_amount: (() => {
         const rawValue = event.payload_json?.Commissions?.product_base_price || 0
         const convertedValue = rawValue / 100
@@ -137,35 +165,9 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
     }
   })
 
-  // Agrupar por platform_order_id e manter apenas o mais recente de cada pedido
-  const uniqueOrdersMap = new Map()
-  
-  allTransformedData?.forEach(order => {
-    const orderId = order.platform_order_id
-    
-    // Pular pedidos sem ID válido (para evitar agrupar todos os "N/A")
-    if (!orderId || orderId === 'N/A') {
-      // Usar o ID do evento como chave única para pedidos sem order_id
-      uniqueOrdersMap.set(`event_${order.id}`, order)
-      return
-    }
-    
-    // Se já existe um pedido com este ID, verificar qual é mais recente
-    if (uniqueOrdersMap.has(orderId)) {
-      const existingOrder = uniqueOrdersMap.get(orderId)
-      // Comparar datas - manter o mais recente
-      if (new Date(order.order_date) > new Date(existingOrder.order_date)) {
-        uniqueOrdersMap.set(orderId, order)
-      }
-    } else {
-      // Primeiro registro deste pedido
-      uniqueOrdersMap.set(orderId, order)
-    }
-  })
-
-  // Converter Map de volta para array e ordenar por data (mais recente primeiro)
-  const transformedData = Array.from(uniqueOrdersMap.values())
-    .sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
+  // Para dados importados, não agrupar - mostrar todos os registros
+  // Para webhooks, agrupar apenas se necessário
+  const transformedData = allTransformedData?.sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime()) || []
 
   return { data: transformedData, error }
 }
@@ -284,4 +286,120 @@ export async function getAdInsights(days = 30) {
     .order('date', { ascending: false })
 
   return { data: data as AdInsight[], error }
+}
+
+// Análise de jornada do cliente (DZA → Mentoria)
+export async function getCustomersJourney() {
+  const { data, error } = await supabase
+    .from('raw_events')
+    .select(`
+      id,
+      payload_json,
+      received_at,
+      platforms(name)
+    `)
+    .order('received_at', { ascending: false })
+
+  if (error) return { data: null, error }
+
+  // Processar dados para análise de jornada
+  const customerMap = new Map()
+
+  data?.forEach(event => {
+    const customer = event.payload_json?.Customer
+    if (!customer) return
+
+    // Usar CPF como identificador principal, fallback para email se não houver CPF
+    const cpf = customer.cpf?.replace(/[^\d]/g, '') // Limpar formatação do CPF
+    const email = customer.email?.toLowerCase() || ''
+    const primaryKey = cpf || email
+    
+    if (!primaryKey) return // Pular se não tiver nem CPF nem email
+
+    const productName = event.payload_json?.Product?.product_name || ''
+    const orderDate = new Date(event.received_at)
+    const phone = customer.phone_number || ''
+    const fullName = customer.full_name || ''
+    const platformName = event.platforms?.name?.toLowerCase() || ''
+
+    if (!customerMap.has(primaryKey)) {
+      customerMap.set(primaryKey, {
+        name: fullName,
+        email: email,
+        phone: phone,
+        cpf: cpf || null,
+        dzaDate: null,
+        mentoriaDate: null,
+        materials: [],
+        daysBetween: null
+      })
+    }
+
+    const customerData = customerMap.get(primaryKey)
+    
+    // Atualizar informações do cliente se necessário (nome e telefone mais completos)
+    if (fullName && fullName.length > customerData.name.length) {
+      customerData.name = fullName
+    }
+    if (phone && !customerData.phone) {
+      customerData.phone = phone
+    }
+    if (email && !customerData.email) {
+      customerData.email = email
+    }
+
+    // DZA vem da Kiwify
+    if (platformName === 'kiwify' && 
+        (productName.toLowerCase().includes('dza') || 
+         productName.toLowerCase().includes('treinamento'))) {
+      if (!customerData.dzaDate || orderDate < new Date(customerData.dzaDate)) {
+        customerData.dzaDate = orderDate.toISOString()
+      }
+    }
+
+    // Mentoria vem da DMG (Digital Manager)
+    if (platformName === 'dmg' && 
+        (productName.toLowerCase().includes('mentoria') || 
+         productName.toLowerCase().includes('individual'))) {
+      if (!customerData.mentoriaDate || orderDate < new Date(customerData.mentoriaDate)) {
+        customerData.mentoriaDate = orderDate.toISOString()
+      }
+    }
+
+    // Adicionar material à lista se não existir
+    if (!customerData.materials.find(m => m.name === productName)) {
+      customerData.materials.push({
+        name: productName,
+        date: orderDate.toISOString(),
+        platform: event.platforms?.name || 'Unknown'
+      })
+    }
+  })
+
+  // Calcular dias entre DZA e Mentoria
+  const customers = Array.from(customerMap.values()).map(customer => {
+    if (customer.dzaDate && customer.mentoriaDate) {
+      const dzaDate = new Date(customer.dzaDate)
+      const mentoriaDate = new Date(customer.mentoriaDate)
+      const diffTime = Math.abs(mentoriaDate.getTime() - dzaDate.getTime())
+      customer.daysBetween = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    }
+    
+    // Ordenar materiais por data
+    customer.materials.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+    
+    return customer
+  })
+
+  // Ordenar por clientes que têm DZA primeiro, depois por data do DZA
+  customers.sort((a, b) => {
+    if (a.dzaDate && !b.dzaDate) return -1
+    if (!a.dzaDate && b.dzaDate) return 1
+    if (a.dzaDate && b.dzaDate) {
+      return new Date(b.dzaDate).getTime() - new Date(a.dzaDate).getTime()
+    }
+    return a.name.localeCompare(b.name)
+  })
+
+  return { data: customers, error: null }
 }
