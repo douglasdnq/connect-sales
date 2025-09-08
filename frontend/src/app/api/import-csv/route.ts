@@ -59,7 +59,148 @@ export async function POST(request: Request) {
       let webhookPayload: any
 
       // Mapear campos baseado na plataforma
-      if (platform === 'kiwify') {
+      if (platform === 'dmg') {
+        // Mapeamento COMPLETO específico para Digital Manager Guru (todos os campos do CSV)
+        webhookPayload = {
+          order_id: row['id transação'] || generateOrderId(),
+          order_status: mapDMGStatus(row['status'] || 'Aprovada'),
+          webhook_event_type: mapDMGStatus(row['status'] || 'Aprovada'),
+          order_date: (() => {
+            const rawDate = row['data pedido']
+            if (rawDate) {
+              // Formato DMG: DD/MM/YYYY HH:mm:ss
+              const dateTimeParts = rawDate.split(' ')
+              const datePart = dateTimeParts[0] // DD/MM/YYYY
+              const timePart = dateTimeParts[1] || '00:00:00' // HH:mm:ss
+              
+              const dateParts = datePart.split('/')
+              if (dateParts.length === 3) {
+                const day = dateParts[0].padStart(2, '0')
+                const month = dateParts[1].padStart(2, '0')
+                const year = dateParts[2]
+                return new Date(`${year}-${month}-${day}T${timePart}`).toISOString()
+              }
+            }
+            return new Date().toISOString()
+          })(),
+          
+          Product: {
+            product_id: row['id produto'] || 'imported_dmg',
+            product_name: row['nome produto'] || 'Produto Importado DMG',
+            offer_name: row['nome oferta'] || null
+          },
+          
+          Customer: {
+            full_name: row['nome contato'] || 'Cliente Importado',
+            email: row['email contato'] || 'imported@email.com',
+            cpf: row['doc contato'] || null,
+            phone_number: row['telefone contato'] || null,
+            address: {
+              street: row['logradouro contato'] || null,
+              number: row['número contato'] || null,
+              complement: row['complemento contato'] || null,
+              neighborhood: row['bairro contato'] || null,
+              city: row['cidade contato'] || null,
+              state: row['estado contato'] || null,
+              zipcode: row['cep contato'] || null,
+              country: row['país contato'] || 'BR'
+            }
+          },
+          
+          Commissions: {
+            currency: row['moeda'] || 'BRL',
+            marketplace_fee: parseDMGCurrency(row['valor marketplace']) * 100,
+            affiliate_fee: parseDMGCurrency(row['valor afiliado']) * 100,
+            charge_amount: parseDMGCurrency(row['valor venda']) * 100,
+            my_commission: parseDMGCurrency(row['valor líquido']) * 100,
+            product_base_price: parseDMGCurrency(row['valor produtos']) * 100,
+            settlement_amount: parseDMGCurrency(row['valor líquido']) * 100,
+            discount_amount: parseDMGCurrency(row['valor desconto']) * 100,
+            tax_amount: parseDMGCurrency(row['valor imposto']) * 100,
+            shipping_amount: parseDMGCurrency(row['valor frete']) * 100,
+            installment_value: parseDMGCurrency(row['valor parcelas']) * 100
+          },
+          
+          Payment: {
+            method: row['pagamento'] || 'unknown',
+            installments: parseInt(row['parcelas'] || '1'),
+            type: row['tipo'] || 'producer',
+            marketplace_name: row['nome marketplace'] || 'DMG',
+            marketplace_id: row['id marketplace'] || null,
+            gateway_name: row['adquirente nome'] || null,
+            gateway_tid: row['adquirente tid'] || null,
+            pix_data: row['pix'] || null,
+            boleto_url: row['url do boleto'] || null,
+            boleto_line: row['linha digitável do boleto'] || null,
+            boleto_due_date: row['vencimento do boleto'] || null
+          },
+          
+          Tracking: {
+            first_capture: row['primeira captura'] || null,
+            first_origin: row['primeira origem'] || null,
+            first_capture_date: row['data 1ª captura'] || null,
+            last_capture: row['última captura'] || null,
+            last_origin: row['última origem'] || null,
+            last_capture_date: row['data última captura'] || null,
+            rppc_sale: row['rppc venda'] || null,
+            rppc_origin: row['origem rppc venda'] || null,
+            rppc_utm_campaign: row['rppc utm campaign'] || null,
+            rppc_utm_medium: row['rppc utm medium'] || null,
+            rppc_utm_term: row['rppc utm term'] || null,
+            rppc_utm_content: row['rppc utm content'] || null,
+            rppc_checkout: row['rppc checkout'] || null,
+            utm_source: row['utm_source'] || null,
+            utm_campaign: row['utm_campaign'] || null,
+            utm_medium: row['utm_medium'] || null,
+            utm_content: row['utm_content'] || null,
+            origin_1: row['origem 1'] || null,
+            origin_2: row['origem 2'] || null,
+            origin_3: row['origem 3'] || null,
+            auto_attribution_response: row['resposta auto atribuição'] || null
+          },
+          
+          Dates: {
+            order_date: row['data pedido'] || null,
+            approval_date: row['data aprovacao'] || null,
+            cancellation_date: row['data cancelamento'] || null,
+            warranty_date: row['data garantia'] || null,
+            unavailable_date: row['data indisponível'] || null
+          },
+          
+          Shipping: {
+            company_name: row['nome da transportadora'] || null,
+            service: row['serviço da transportadora'] || null,
+            tracking_code: row['código de rastreamento'] || null,
+            cost: parseDMGCurrency(row['valor da transportadora']) * 100,
+            delivery_time: row['tempo de entrega'] || null
+          },
+          
+          Subscription: {
+            code: row['assinatura código'] || null,
+            cycle: row['assinatura ciclo'] || null
+          },
+          
+          Coupon: {
+            code: row['cupom código'] || null,
+            value: parseDMGCurrency(row['cupom valor']) * 100
+          },
+          
+          // Campos específicos DMG
+          marketplace_return: row['retorno marketplace'] || null,
+          refund_reason: row['motivo reembolso'] || null,
+          last_sale_marketplace: row['nome martketplace ultima venda'] || null,
+          last_sale_marketplace_id: row['id marketplace ultima venda'] || null,
+          company_name: row['nome empresa contato'] || null,
+          phone_code: row['codigo telefone contato'] || null,
+          offer_url: row['url oferta'] || null,
+          quantity: parseInt(row['quantidade produto'] || '1'),
+          
+          // Metadados de importação
+          import_source: 'csv_import',
+          imported_at: new Date().toISOString(),
+          original_csv_row: row // Para debug se necessário
+        }
+      } else if (platform === 'kiwify') {
         // Mapeamento COMPLETO específico para Kiwify (todos os campos do webhook)
         webhookPayload = {
           order_id: row['ID da venda'] || generateOrderId(),
@@ -209,7 +350,27 @@ export async function POST(request: Request) {
 
       // Data específica por plataforma
       let eventDate: string
-      if (platform === 'kiwify') {
+      if (platform === 'dmg') {
+        // Converter data brasileira (DD/MM/YYYY HH:mm:ss) para formato ISO
+        const rawDate = row['data pedido']
+        if (rawDate) {
+          const dateTimeParts = rawDate.split(' ')
+          const datePart = dateTimeParts[0] // DD/MM/YYYY
+          const timePart = dateTimeParts[1] || '00:00:00' // HH:mm:ss
+          
+          const dateParts = datePart.split('/')
+          if (dateParts.length === 3) {
+            const day = dateParts[0].padStart(2, '0')
+            const month = dateParts[1].padStart(2, '0')
+            const year = dateParts[2]
+            eventDate = new Date(`${year}-${month}-${day}T${timePart}`).toISOString()
+          } else {
+            eventDate = new Date(rawDate).toISOString()
+          }
+        } else {
+          eventDate = new Date().toISOString()
+        }
+      } else if (platform === 'kiwify') {
         // Converter data brasileira (DD/MM/YYYY HH:mm:ss) para formato ISO
         const rawDate = row['Data de Criação']
         if (rawDate) {
@@ -235,8 +396,12 @@ export async function POST(request: Request) {
       }
 
       return {
-        event_type: 'imported_' + (platform === 'kiwify' ? mapKiwifyStatus(row['Status'] || 'paid') : mapStatus(row['Status'] || row['order_status'] || 'approved')),
-        platform_id: 1, // Assumindo Kiwify como ID 1
+        event_type: 'imported_' + (
+          platform === 'dmg' ? mapDMGStatus(row['status'] || 'Aprovada') :
+          platform === 'kiwify' ? mapKiwifyStatus(row['Status'] || 'paid') : 
+          mapStatus(row['Status'] || row['order_status'] || 'approved')
+        ),
+        platform_id: platform === 'dmg' ? 2 : 1, // DMG ID 2, Kiwify ID 1
         payload_json: webhookPayload,
         received_at: eventDate,
         import_tag: `imported_${platform}_${Date.now()}`, // Tag para identificar dados importados
@@ -303,6 +468,29 @@ function mapStatus(status: string): string {
   return 'paid' // default para dados importados
 }
 
+function mapDMGStatus(status: string): string {
+  const normalizedStatus = status.toLowerCase()
+  
+  // Mapeamento específico para status do Digital Manager Guru
+  if (normalizedStatus === 'aprovada') {
+    return 'paid'
+  }
+  if (normalizedStatus === 'pendente' || normalizedStatus === 'aguardando pagamento') {
+    return 'pending'
+  }
+  if (normalizedStatus === 'cancelada' || normalizedStatus === 'cancelado') {
+    return 'canceled'
+  }
+  if (normalizedStatus === 'reembolsada' || normalizedStatus === 'reembolso') {
+    return 'refunded'
+  }
+  if (normalizedStatus === 'chargeback') {
+    return 'chargeback'
+  }
+  
+  return 'paid' // default para dados importados
+}
+
 function mapKiwifyStatus(status: string): string {
   const normalizedStatus = status.toLowerCase()
   
@@ -359,6 +547,26 @@ function parseCSVLine(line: string): string[] {
   
   result.push(current.trim())
   return result
+}
+
+function parseDMGCurrency(value: string | undefined): number {
+  if (!value || value === '') return 0
+  
+  // Remover aspas e espaços
+  let cleanValue = value.replace(/["'\s]/g, '')
+  
+  // Tratar formato brasileiro: "1.000,00" ou "1000,00"
+  // Se tem tanto ponto quanto vírgula, ponto é separador de milhares
+  if (cleanValue.includes('.') && cleanValue.includes(',')) {
+    // Ex: "1.000,00" -> remove pontos -> "1000,00" -> troca vírgula por ponto -> "1000.00"
+    cleanValue = cleanValue.replace(/\./g, '').replace(',', '.')
+  } else if (cleanValue.includes(',')) {
+    // Ex: "992,10" -> troca vírgula por ponto -> "992.10"
+    cleanValue = cleanValue.replace(',', '.')
+  }
+  
+  const parsed = parseFloat(cleanValue)
+  return isNaN(parsed) ? 0 : parsed
 }
 
 function generateEventHash(payload: any): string {

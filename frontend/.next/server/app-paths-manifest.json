@@ -1,6 +1,8 @@
 {
+  "/api/import-csv/route": "app/api/import-csv/route.js",
   "/auth/login/page": "app/auth/login/page.js",
   "/(dashboard)/orders/page": "app/(dashboard)/orders/page.js",
+  "/(dashboard)/settings/page": "app/(dashboard)/settings/page.js",
   "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
   "/(dashboard)/customers/page": "app/(dashboard)/customers/page.js"
 }

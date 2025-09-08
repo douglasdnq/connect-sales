@@ -10,10 +10,12 @@ export default function Orders() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [platformFilter, setPlatformFilter] = useState<string>('all')
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [modalOpen, setModalOpen] = useState(false)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [dateError, setDateError] = useState('')
   const [importModalOpen, setImportModalOpen] = useState(false)
   const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
@@ -44,7 +46,22 @@ export default function Orders() {
   }
 
   useEffect(() => {
-    fetchOrders(startDate, endDate)
+    // Validar datas
+    if (startDate && endDate && endDate < startDate) {
+      setDateError('Data fim deve ser maior ou igual à data início')
+      return
+    }
+    
+    setDateError('')
+    
+    // Só buscar dados quando:
+    // 1. Não há datas definidas (buscar todos)
+    // 2. Há data início E data fim definidas 
+    // 3. Data fim é maior ou igual à data início
+    if ((!startDate && !endDate) || 
+        (startDate && endDate && endDate >= startDate)) {
+      fetchOrders(startDate, endDate)
+    }
   }, [startDate, endDate])
 
   const filteredOrders = orders.filter(order => {
@@ -53,7 +70,8 @@ export default function Orders() {
                          order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
-    return matchesSearch && matchesStatus
+    const matchesPlatform = platformFilter === 'all' || order.platform_name?.toLowerCase() === platformFilter.toLowerCase()
+    return matchesSearch && matchesStatus && matchesPlatform
   })
 
   // Paginação
@@ -66,7 +84,7 @@ export default function Orders() {
   // Reset página quando filtros mudam
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, statusFilter, startDate, endDate, itemsPerPage])
+  }, [searchTerm, statusFilter, platformFilter, startDate, endDate, itemsPerPage])
 
   const formatCurrency = (value?: number) => {
     if (!value) return 'R$ 0,00'
@@ -247,7 +265,16 @@ export default function Orders() {
             <div className="text-2xl font-bold text-gray-900">
               {filteredOrders.length}
             </div>
-            <div className="text-sm text-gray-500">Total Pedidos</div>
+            <div className="text-sm text-gray-500">
+              Total Pedidos
+              {platformFilter !== 'all' && (
+                <div className="text-xs text-blue-500 mt-1">
+                  {platformFilter === 'kiwify' ? '🟢 Kiwify' : 
+                   platformFilter === 'dmg' ? '🔵 DMG' :
+                   platformFilter === 'voomp' ? '🟣 Voomp' : '🟡 Cademi'}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="card">
@@ -298,7 +325,7 @@ export default function Orders() {
                   />
                 </div>
               </div>
-              <div>
+              <div className="flex flex-col sm:flex-row gap-2">
                 <select
                   className="w-full sm:w-auto px-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
                   value={statusFilter}
@@ -310,6 +337,17 @@ export default function Orders() {
                   <option value="refunded">Reembolsado</option>
                   <option value="chargeback">Chargeback</option>
                   <option value="canceled">Cancelado</option>
+                </select>
+                <select
+                  className="w-full sm:w-auto px-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                  value={platformFilter}
+                  onChange={(e) => setPlatformFilter(e.target.value)}
+                >
+                  <option value="all">Todas as Plataformas</option>
+                  <option value="kiwify">🟢 Kiwify</option>
+                  <option value="dmg">🔵 Digital Manager Guru</option>
+                  <option value="voomp">🟣 Voomp</option>
+                  <option value="cademi">🟡 Cademi</option>
                 </select>
               </div>
             </div>
@@ -345,16 +383,45 @@ export default function Orders() {
                     onChange={(e) => setEndDate(e.target.value)}
                   />
                 </div>
+                {dateError && (
+                  <div className="text-sm text-red-600 mt-2 px-1">
+                    ⚠️ {dateError}
+                  </div>
+                )}
               </div>
               <div className="flex gap-2">
                 <button
                   onClick={() => {
                     setStartDate('')
                     setEndDate('')
+                    setDateError('')
                   }}
                   className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors duration-200 whitespace-nowrap"
                 >
                   Limpar Datas
+                </button>
+                {startDate && !endDate && (
+                  <div className="flex items-center px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 text-sm">
+                    ⏳ Defina a data fim para filtrar
+                  </div>
+                )}
+                {startDate && endDate && endDate >= startDate && (
+                  <div className="flex items-center px-3 py-2 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
+                    ✅ Filtro de período ativo
+                  </div>
+                )}
+                <button
+                  onClick={() => {
+                    setSearchTerm('')
+                    setStatusFilter('all')
+                    setPlatformFilter('all')
+                    setStartDate('')
+                    setEndDate('')
+                    setDateError('')
+                  }}
+                  className="px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl transition-colors duration-200 whitespace-nowrap"
+                >
+                  Limpar Todos Filtros
                 </button>
                 {selectedOrders.length > 0 && (
                   <button
