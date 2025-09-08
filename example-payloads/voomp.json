@@ -1,0 +1,134 @@
+{
+  "webhook_type": "sale_notification",
+  "webhook_version": "v2.1",
+  "sale_id": "VOOMP_SALE_777999",
+  "sale_status": "approved",
+  "sale_type": "product",
+  "created_at": "2024-01-15T18:30:00Z",
+  "updated_at": "2024-01-15T18:32:00Z",
+  "product_id": "vitalicio_acesso_premium_2024",
+  "product_name": "Acesso Vitalício - Plataforma Premium",
+  "product_type": "lifetime",
+  "product_category": "membership",
+  "customer": {
+    "id": "customer_voomp_111333",
+    "email": "carlos.mendes@example.com",
+    "full_name": "Carlos Eduardo Mendes",
+    "first_name": "Carlos",
+    "last_name": "Mendes",
+    "phone_number": "+5511888999000",
+    "cpf": "55544433322",
+    "birthdate": "1978-07-22",
+    "gender": "male",
+    "address": {
+      "street": "Rua Augusta, 789",
+      "number": "789",
+      "complement": "Apto 45",
+      "neighborhood": "Consolação",
+      "city": "São Paulo",
+      "state": "SP",
+      "zipcode": "01305-000",
+      "country": "Brazil"
+    },
+    "registration_date": "2024-01-15T18:25:00Z",
+    "customer_type": "new",
+    "lifetime_value": 997.00
+  },
+  "sale_details": {
+    "sale_value": 997.00,
+    "original_price": 1497.00,
+    "discount_amount": 500.00,
+    "discount_type": "fixed",
+    "discount_coupon": "BLACKFRIDAY50",
+    "currency": "BRL",
+    "sale_date": "2024-01-15T18:30:00Z",
+    "payment_type": "credit_card",
+    "payment_method": "visa",
+    "installments": 10,
+    "installment_value": 99.70,
+    "commission_percentage": 10.0,
+    "commission_value": 99.70,
+    "net_value": 897.30
+  },
+  "transaction": {
+    "transaction_id": "voomp_txn_987123456",
+    "gateway": "pagarme",
+    "gateway_transaction_id": "tran_pagarme_456789",
+    "authorization_code": "AUTH123456",
+    "nsu": "NSU789123",
+    "tid": "TID456789123",
+    "processed_at": "2024-01-15T18:31:30Z",
+    "status": "captured"
+  },
+  "affiliates": [
+    {
+      "affiliate_id": "aff_voomp_777",
+      "affiliate_name": "Super Parceiro Marketing",
+      "affiliate_email": "parceiro@example.com",
+      "level": 1,
+      "commission_percentage": 30.0,
+      "commission_value": 299.10,
+      "commission_type": "first_sale"
+    },
+    {
+      "affiliate_id": "aff_voomp_888",
+      "affiliate_name": "Influencer Top",
+      "affiliate_email": "influencer@example.com", 
+      "level": 2,
+      "commission_percentage": 10.0,
+      "commission_value": 99.70,
+      "commission_type": "second_level"
+    }
+  ],
+  "marketing": {
+    "utm_source": "instagram",
+    "utm_medium": "story",
+    "utm_campaign": "lancamento_vitalicio_q1",
+    "utm_content": "story_day3",
+    "utm_term": "acesso+vitalicio",
+    "fbclid": "IwAR1234567890abcdef",
+    "referral_source": "organic_social",
+    "landing_page": "https://voomp.com.br/vitalicio",
+    "conversion_page": "https://checkout.voomp.com.br/vitalicio"
+  },
+  "customer_journey": {
+    "first_visit": "2024-01-10T14:20:00Z",
+    "last_visit": "2024-01-15T18:25:00Z",
+    "total_visits": 5,
+    "time_to_conversion": "5d 4h 10m",
+    "pages_viewed": [
+      "/vitalicio",
+      "/depoimentos", 
+      "/faq",
+      "/checkout"
+    ],
+    "email_interactions": [
+      {
+        "type": "opened",
+        "campaign": "serie_lancamento_dia_1",
+        "timestamp": "2024-01-11T09:15:00Z"
+      },
+      {
+        "type": "clicked",
+        "campaign": "serie_lancamento_dia_3", 
+        "timestamp": "2024-01-13T16:30:00Z"
+      }
+    ]
+  },
+  "metadata": {
+    "ip_address": "189.123.456.789",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0",
+    "device_type": "desktop",
+    "browser": "Chrome",
+    "operating_system": "Windows",
+    "screen_resolution": "1920x1080",
+    "timezone": "America/Sao_Paulo",
+    "language": "pt-BR"
+  },
+  "webhook_security": {
+    "timestamp": "2024-01-15T18:33:00Z",
+    "signature": "sha256=def789ghi012jkl345mno678pqr901stu234vwx567yz890",
+    "retry_attempt": 1,
+    "max_retries": 5
+  }
+}

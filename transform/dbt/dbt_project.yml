@@ -1,0 +1,40 @@
+name: 'data_hub'
+version: '1.0.0'
+config-version: 2
+
+profile: 'data_hub'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["data"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  data_hub:
+    staging:
+      +materialized: view
+      +schema: staging
+    marts:
+      +materialized: table
+      +schema: marts
+      finance:
+        +materialized: table
+      marketing:
+        +materialized: table
+      operations:
+        +materialized: table
+
+vars:
+  start_date: '2024-01-01'
+  attribution_window_hours: 72
+  
+tests:
+  data_hub:
+    +severity: warn

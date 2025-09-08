@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background-color: #f5f5f7;
+  color: #1d1d1f;
+  line-height: 1.6;
+}
+
+/* Apple-inspired cards */
+.card {
+  @apply bg-white rounded-xl shadow-sm border border-gray-200/50;
+  backdrop-filter: blur(20px);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.card-header {
+  @apply px-6 py-5 border-b border-gray-100;
+}
+
+.card-content {
+  @apply px-6 py-5;
+}
+
+/* Apple-inspired buttons */
+.btn-primary {
+  @apply bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+  background: linear-gradient(135deg, #007AFF 0%, #0056CC 100%);
+}
+
+.btn-secondary {
+  @apply bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-gray-900 font-semibold py-3 px-6 rounded-lg transition-all duration-200;
+}
+
+.btn-danger {
+  @apply bg-red-500 hover:bg-red-600 active:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+  background: linear-gradient(135deg, #FF3B30 0%, #DC2626 100%);
+}
+
+.btn-success {
+  @apply bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md;
+  background: linear-gradient(135deg, #34C759 0%, #16A34A 100%);
+}
+
+/* Status colors inspired by Apple */
+.status-success { @apply bg-green-50 text-green-700 border-green-200; }
+.status-warning { @apply bg-amber-50 text-amber-700 border-amber-200; }
+.status-error { @apply bg-red-50 text-red-700 border-red-200; }
+.status-info { @apply bg-blue-50 text-blue-700 border-blue-200; }
+
+/* Platform colors */
+.platform-kiwify { @apply bg-emerald-50 text-emerald-700 border-emerald-200; }
+.platform-dmg { @apply bg-blue-50 text-blue-700 border-blue-200; }
+.platform-cademi { @apply bg-purple-50 text-purple-700 border-purple-200; }
+.platform-voomp { @apply bg-orange-50 text-orange-700 border-orange-200; }
+.platform-pixel { @apply bg-gray-50 text-gray-700 border-gray-200; }
+.platform-meta { @apply bg-indigo-50 text-indigo-700 border-indigo-200; }
+
+/* Typography */
+h1 { @apply text-3xl font-bold text-gray-900 tracking-tight; }
+h2 { @apply text-2xl font-semibold text-gray-900 tracking-tight; }
+h3 { @apply text-lg font-semibold text-gray-900; }
+
+/* Form inputs */
+input[type="text"], input[type="email"], input[type="password"], select, textarea {
+  @apply block w-full px-4 py-3 border border-gray-200 rounded-lg bg-white/50 backdrop-blur-sm focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200;
+}
+
+/* Tables */
+table {
+  @apply w-full border-separate;
+  border-spacing: 0;
+}
+
+th {
+  @apply bg-gray-50/80 px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider border-b border-gray-200;
+}
+
+td {
+  @apply px-6 py-4 border-b border-gray-100;
+}
+
+tr:hover td {
+  @apply bg-gray-50/30;
+}
+
+/* Badges */
+.badge {
+  @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border;
+}
+
+/* Sidebar improvements */
+.sidebar-item {
+  @apply flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200;
+}
+
+.sidebar-item.active {
+  @apply bg-blue-50 text-blue-700 border-r-2 border-blue-500;
+  background: linear-gradient(90deg, rgba(0, 122, 255, 0.1) 0%, rgba(0, 122, 255, 0.05) 100%);
+}
+
+.sidebar-item:not(.active) {
+  @apply text-gray-600 hover:bg-gray-50 hover:text-gray-900;
+}

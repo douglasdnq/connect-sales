@@ -1,0 +1,29 @@
+{
+  "name": "data-hub-mvp",
+  "version": "1.0.0",
+  "description": "MVP de Data Hub para integração de plataformas de infoprodutos",
+  "scripts": {
+    "dev:edge": "supabase functions serve --env-file .env --no-verify-jwt",
+    "db:migrate": "supabase db reset",
+    "seed": "psql \"$SUPABASE_DB_URL\" -f db/seed.sql",
+    "test": "vitest run",
+    "test:watch": "vitest watch"
+  },
+  "keywords": ["data-hub", "webhooks", "analytics"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3",
+    "vitest": "^1.1.0",
+    "@vitest/ui": "^1.1.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

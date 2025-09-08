@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Corrida de Carros</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #222;
+            font-family: Arial, sans-serif;
+        }
+        #gameContainer {
+            text-align: center;
+        }
+        #gameCanvas {
+            border: 2px solid #fff;
+            background-color: #444;
+        }
+        #carSelection {
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        .carOption {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px;
+            border: 2px solid #fff;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .carOption:hover {
+            background-color: #fff;
+            color: #000;
+        }
+        #gameOver {
+            display: none;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1000" height="600"></canvas>
+        
+        <div id="carSelection">
+            <h2>Escolha seu carro:</h2>
+            <div class="carOption" onclick="selectCar('shelby')">Shelby Cobra</div>
+            <div class="carOption" onclick="selectCar('mustang')">Ford Mustang</div>
+            <div class="carOption" onclick="selectCar('lamborghini')">Lamborghini</div>
+            <div class="carOption" onclick="selectCar('supra')">Toyota Supra</div>
+            <div class="carOption" onclick="selectCar('yaris')">Toyota Yaris</div>
+            <div class="carOption" onclick="selectCar('cybertruck')">Tesla Cybertruck</div>
+            <div class="carOption" onclick="selectCar('byd')">BYD Song Pro</div>
+            <div class="carOption" onclick="selectCar('divo')">Bugatti Divo</div>
+            <div class="carOption" onclick="selectCar('fusca')">Volkswagen Fusca</div>
+            <div class="carOption" onclick="selectCar('harley')">Harley Davidson</div>
+            <div class="carOption" onclick="selectCar('golfgti')">Volkswagen Golf GTI</div>
+            <div class="carOption" onclick="selectCar('journey')">Dodge Journey</div>
+            <div class="carOption" onclick="selectCar('ventonico')">Super Ventônico</div>
+            <div class="carOption" onclick="selectCar('intergalactico')">Super Intergalático</div>
+            <div class="carOption" onclick="selectCar('compass')">Jeep Compass</div>
+            <div class="carOption" onclick="selectCar('challenger')">Dodge Challenger</div>
+            <div class="carOption" onclick="selectCar('trator')">Trator</div>
+            <div class="carOption" onclick="selectCar('mobi')">Fiat Mobi</div>
+            <div class="carOption" onclick="selectCar('nevera')">Rimac Nevera</div>
+            <div class="carOption" onclick="selectCar('quadriciclo')">Quadriciclo</div>
+            <div class="carOption" onclick="selectCar('ultimate')">@@@@@ ULTIMATE @@@@@</div>
+        </div>
+        
+        <div id="gameOver">
+            <h2 id="gameOverText"></h2>
+            <button onclick="resetGame()">Jogar Novamente</button>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>

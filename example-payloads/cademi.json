@@ -1,0 +1,76 @@
+{
+  "webhook_id": "webhook_cademi_789123",
+  "event_type": "student_enrolled",
+  "enrollment_id": "CADEMI_ENROLL_555777",
+  "course_id": "course_formacao_gestao_2024",
+  "course_name": "Formação Completa em Gestão de Negócios",
+  "course_category": "business",
+  "course_duration_hours": 120,
+  "course_modules": 8,
+  "student": {
+    "id": "student_cademi_888999",
+    "email": "ana.costa@example.com",
+    "name": "Ana Paula Costa",
+    "phone": "+5531987654321",
+    "document": "11122233344",
+    "birthdate": "1985-03-15",
+    "gender": "female",
+    "address": {
+      "street": "Av. Contorno, 456",
+      "city": "Belo Horizonte",
+      "state": "MG",
+      "zipcode": "30110-000",
+      "country": "BR"
+    },
+    "profile": {
+      "profession": "Empresária",
+      "company": "Costa & Cia Ltda",
+      "experience_level": "intermediate",
+      "goals": ["certificacao", "networking", "crescimento_profissional"]
+    }
+  },
+  "enrollment": {
+    "enrolled_date": "2024-01-15T12:00:00Z",
+    "start_date": "2024-02-01T09:00:00Z",
+    "end_date": "2024-05-30T18:00:00Z",
+    "status": "active",
+    "progress": 0,
+    "certificate_eligible": true,
+    "payment_plan": "full_payment"
+  },
+  "pricing": {
+    "list_price": 1997.00,
+    "discount": 200.00,
+    "final_price": 1797.00,
+    "currency": "BRL",
+    "promotion_code": "EARLY_BIRD",
+    "installments": 12,
+    "monthly_amount": 149.75
+  },
+  "payment": {
+    "status": "approved",
+    "method": "credit_card",
+    "processor": "stone",
+    "transaction_id": "stone_txn_456789123",
+    "paid_at": "2024-01-15T12:05:00Z",
+    "due_date": "2024-01-15T23:59:59Z"
+  },
+  "instructor": {
+    "id": "instructor_123",
+    "name": "Dr. Roberto Gestão",
+    "email": "roberto@cademi.com.br",
+    "bio": "MBA Harvard, 20 anos de experiência"
+  },
+  "tracking": {
+    "utm_source": "email",
+    "utm_medium": "newsletter",
+    "utm_campaign": "lancamento_formacao_gestao",
+    "utm_content": "cta_botao_principal",
+    "referral_code": "PARCEIRO123"
+  },
+  "webhooks": {
+    "sent_at": "2024-01-15T12:10:00Z",
+    "retry_count": 0,
+    "signature": "sha256=abc123def456..."
+  }
+}

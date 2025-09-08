@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exemplo de Uso - DQ Pixel</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #666;
+            margin-top: 30px;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+        }
+        pre {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 20px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .demo-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 5px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px;
+            width: 250px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+        .link-examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .link-examples a {
+            padding: 8px 15px;
+            background: #e0e0e0;
+            color: #333;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .link-examples a:hover {
+            background: #d0d0d0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 DQ Pixel - Sistema de Rastreamento 1st-party</h1>
+        
+        <div class="status" id="status">
+            Status: Inicializando pixel...
+        </div>
+
+        <h2>1. Instalação Básica</h2>
+        <p>Adicione o script do pixel em todas as páginas do seu site:</p>
+        <pre>&lt;script 
+  src="/public/dq_pixel.js" 
+  data-auto-init="true"&gt;
+&lt;/script&gt;</pre>
+
+        <h2>2. Configuração Manual</h2>
+        <p>Para configuração manual com endpoint customizado:</p>
+        <pre>&lt;script src="/public/dq_pixel.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  DQPixel.init({
+    endpoint: 'https://your-supabase-url.supabase.co/functions/v1/ingest-pixel'
+  });
+&lt;/script&gt;</pre>
+
+        <h2>3. Exemplos de Links com UTMs</h2>
+        <p>Use estes links para testar a captura de atribuição:</p>
+        <div class="link-examples">
+            <a href="?utm_source=facebook&utm_medium=cpc&utm_campaign=black_friday">Facebook Ads</a>
+            <a href="?utm_source=google&utm_medium=cpc&utm_campaign=search_brand&gclid=123456">Google Ads</a>
+            <a href="?utm_source=instagram&utm_medium=story&utm_campaign=launch&fbclid=abc123">Instagram Story</a>
+            <a href="?utm_source=email&utm_medium=newsletter&utm_campaign=weekly">Email Marketing</a>
+            <a href="?utm_source=influencer&utm_medium=post&utm_campaign=partner_joão">Influenciador</a>
+        </div>
+
+        <h2>4. Captura de Dados do Usuário</h2>
+        <div class="demo-section">
+            <h3>Adicionar Email</h3>
+            <input type="email" id="email-input" placeholder="usuario@exemplo.com">
+            <button onclick="pushEmail()">Enviar Email</button>
+            
+            <h3>Adicionar CPF</h3>
+            <input type="text" id="cpf-input" placeholder="123.456.789-00">
+            <button onclick="pushCPF()">Enviar CPF</button>
+        </div>
+
+        <h2>5. Rastreamento de Eventos</h2>
+        <div class="demo-section">
+            <button onclick="trackEvent('view_product', {product_id: 'ABC123', price: 99.90})">
+                Visualizar Produto
+            </button>
+            <button onclick="trackEvent('add_to_cart', {product_id: 'ABC123', qty: 1})">
+                Adicionar ao Carrinho
+            </button>
+            <button onclick="trackEvent('begin_checkout', {value: 99.90})">
+                Iniciar Checkout
+            </button>
+            <button onclick="trackEvent('purchase', {order_id: 'ORD123', value: 99.90})">
+                Compra Realizada
+            </button>
+        </div>
+
+        <h2>6. Utilitários</h2>
+        <div class="demo-section">
+            <button onclick="showVisitorId()">Mostrar Visitor ID</button>
+            <button onclick="showAttribution()">Mostrar Atribuição</button>
+            <button onclick="clearPixelData()">Limpar Dados (LGPD)</button>
+        </div>
+
+        <h2>7. Integração com Checkout</h2>
+        <p>No seu checkout, passe os parâmetros UTM para manter a atribuição:</p>
+        <pre>// Exemplo de link para checkout mantendo atribuição
+const attribution = DQPixel.getAttribution();
+const checkoutUrl = new URL('https://checkout.exemplo.com/');
+
+if (attribution) {
+  if (attribution.utm_source) checkoutUrl.searchParams.set('utm_source', attribution.utm_source);
+  if (attribution.utm_medium) checkoutUrl.searchParams.set('utm_medium', attribution.utm_medium);
+  if (attribution.utm_campaign) checkoutUrl.searchParams.set('utm_campaign', attribution.utm_campaign);
+  if (attribution.fbclid) checkoutUrl.searchParams.set('fbclid', attribution.fbclid);
+  if (attribution.gclid) checkoutUrl.searchParams.set('gclid', attribution.gclid);
+}
+
+window.location.href = checkoutUrl.toString();</pre>
+
+        <h2>8. Console de Debug</h2>
+        <pre id="debug-console">Console aparecerá aqui...</pre>
+    </div>
+
+    <!-- Configurar endpoint correto antes de usar em produção -->
+    <script>
+        // Configurar endpoint para testes locais
+        window.DQ_PIXEL_ENDPOINT = 'http://localhost:54321/functions/v1/ingest-pixel';
+    </script>
+    
+    <!-- Carregar o pixel -->
+    <script src="public/dq_pixel.js"></script>
+    
+    <script>
+        // Inicializar pixel
+        DQPixel.init();
+        
+        // Atualizar status
+        document.getElementById('status').innerHTML = 
+            'Status: <strong style="color: green;">Pixel Ativo</strong> | Visitor ID: ' + DQPixel.getVisitorId();
+        
+        // Funções de demonstração
+        function pushEmail() {
+            const email = document.getElementById('email-input').value;
+            if (email) {
+                DQPixel.pushEmail(email);
+                updateConsole('Email enviado: ' + email);
+            }
+        }
+        
+        function pushCPF() {
+            const cpf = document.getElementById('cpf-input').value;
+            if (cpf) {
+                DQPixel.pushCPF(cpf);
+                updateConsole('CPF enviado: ' + cpf);
+            }
+        }
+        
+        function trackEvent(eventName, data) {
+            DQPixel.track(eventName, data);
+            updateConsole('Evento rastreado: ' + eventName + ' - ' + JSON.stringify(data));
+        }
+        
+        function showVisitorId() {
+            const visitorId = DQPixel.getVisitorId();
+            alert('Seu Visitor ID: ' + visitorId);
+            updateConsole('Visitor ID: ' + visitorId);
+        }
+        
+        function showAttribution() {
+            const attribution = DQPixel.getAttribution();
+            if (attribution) {
+                alert('Atribuição atual:\n' + JSON.stringify(attribution, null, 2));
+                updateConsole('Atribuição: ' + JSON.stringify(attribution));
+            } else {
+                alert('Nenhuma atribuição encontrada');
+                updateConsole('Nenhuma atribuição encontrada');
+            }
+        }
+        
+        function clearPixelData() {
+            if (confirm('Tem certeza que deseja limpar todos os dados do pixel?')) {
+                DQPixel.clearData();
+                updateConsole('Dados do pixel limpos (compliance LGPD)');
+            }
+        }
+        
+        function updateConsole(message) {
+            const console = document.getElementById('debug-console');
+            const timestamp = new Date().toLocaleTimeString('pt-BR');
+            console.innerHTML = `[${timestamp}] ${message}\n` + console.innerHTML;
+        }
+        
+        // Log inicial
+        updateConsole('Pixel inicializado com sucesso');
+        const attribution = DQPixel.getAttribution();
+        if (attribution) {
+            updateConsole('Atribuição detectada: ' + JSON.stringify(attribution));
+        }
+    </script>
+</body>
+</html>

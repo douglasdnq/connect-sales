@@ -1,0 +1,58 @@
+version: 2
+
+sources:
+  - name: public
+    database: postgres
+    schema: public
+    tables:
+      - name: orders
+        columns:
+          - name: id
+            tests:
+              - unique
+              - not_null
+      - name: customers
+        columns:
+          - name: id
+            tests:
+              - unique
+              - not_null
+      - name: products
+      - name: platforms
+      - name: ad_insights_daily
+      - name: attribution
+      - name: payments
+      - name: refunds
+      - name: expenses
+
+models:
+  - name: stg_orders
+    description: "Pedidos limpos e enriquecidos com informações de plataforma"
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+      - name: status
+        tests:
+          - accepted_values:
+              values: ['pending', 'paid', 'refunded', 'chargeback', 'canceled']
+              
+  - name: stg_customers
+    description: "Clientes com métricas de lifetime value e segmentação"
+    columns:
+      - name: customer_id
+        tests:
+          - unique
+          - not_null
+          
+  - name: stg_ad_insights
+    description: "Insights de mídia com métricas calculadas"
+    columns:
+      - name: insight_id
+        tests:
+          - unique
+          - not_null
+      - name: ctr
+        tests:
+          - not_null

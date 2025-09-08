@@ -1,0 +1,62 @@
+{
+  "transaction_id": "DMG_TXN_987654321",
+  "status": "completed",
+  "event_type": "payment_approved",
+  "created_at": "2024-01-15T16:45:30Z",
+  "updated_at": "2024-01-15T16:47:15Z",
+  "product": {
+    "id": "ebook_vendas_online_2024",
+    "name": "E-book: Vendas Online que Convertem",
+    "category": "ebook",
+    "price": 97.00,
+    "discount": 20.00,
+    "final_price": 77.00
+  },
+  "buyer": {
+    "id": "customer_dmg_456789",
+    "email": "maria.santos@example.com",
+    "name": "Maria Santos",
+    "phone": "+5521998776655",
+    "cpf": "98765432101",
+    "address": {
+      "street": "Rua das Flores, 123",
+      "city": "Rio de Janeiro",
+      "state": "RJ",
+      "zipcode": "22070-001",
+      "country": "BR"
+    }
+  },
+  "payment": {
+    "method": "pix",
+    "amount": 77.00,
+    "fee": 2.31,
+    "tax": 0.00,
+    "net_amount": 74.69,
+    "currency": "BRL",
+    "installments": 1,
+    "date": "2024-01-15T16:46:00Z",
+    "approval_code": "PIX123456",
+    "gateway": "mercadopago"
+  },
+  "affiliate": {
+    "id": "aff_12345",
+    "email": "parceiro@example.com",
+    "name": "Parceiro Marketing",
+    "commission_rate": 30.0,
+    "commission_amount": 23.10
+  },
+  "tracking": {
+    "source": "google",
+    "medium": "cpc", 
+    "campaign": "ebook_search_brand",
+    "content": "anuncio_principal",
+    "term": "ebook+vendas",
+    "gclid": "Cj0KCQiA1NebBhDDARIsAANiDD123456789"
+  },
+  "metadata": {
+    "ip_address": "192.168.1.100",
+    "user_agent": "Mozilla/5.0...",
+    "referrer": "https://google.com/",
+    "landing_page": "https://seusite.com/ebook-vendas"
+  }
+}
