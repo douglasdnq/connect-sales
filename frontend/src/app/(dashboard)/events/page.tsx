@@ -12,7 +12,7 @@ interface WebhookEvent {
   order_id?: string
   customer_email?: string
   processed: boolean
-  error_message?: string
+  error_message?: string | null
   payload: any
   created_at: string
 }

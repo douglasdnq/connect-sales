@@ -102,7 +102,7 @@ export default function Dashboard() {
           mentoriaSales: goalData?.current.mentoria_sales || 0,
           mentoriaRevenue: goalData?.current.mentoria_revenue || 0,
           conversions: ascensions || 0, // Ascensões reais
-          conversionRate: goalData?.current.dza_sales > 0 
+          conversionRate: goalData?.current.dza_sales && goalData.current.dza_sales > 0 
             ? (((ascensions || 0) / goalData.current.dza_sales) * 100) 
             : 0,
           goalProgress: goalData,

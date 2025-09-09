@@ -1,0 +1,17 @@
+{
+  "/api/fix-rls/route": "/api/fix-rls",
+  "/api/bulk-delete/route": "/api/bulk-delete",
+  "/_not-found/page": "/_not-found",
+  "/api/leads/route": "/api/leads",
+  "/api/migrate/route": "/api/migrate",
+  "/api/import-csv/route": "/api/import-csv",
+  "/auth/login/page": "/auth/login",
+  "/page": "/",
+  "/(dashboard)/customers/page": "/customers",
+  "/(dashboard)/goals/page": "/goals",
+  "/(dashboard)/dashboard/page": "/dashboard",
+  "/(dashboard)/orders/page": "/orders",
+  "/(dashboard)/settings/page": "/settings",
+  "/(dashboard)/events/page": "/events",
+  "/(dashboard)/errors/page": "/errors"
+}

@@ -228,7 +228,7 @@ export async function getWebhookEvents(limit = 100) {
   // Transformar para formato esperado pela página
   const transformedData = data?.map(event => ({
     id: event.id.toString(),
-    platform: event.platforms?.name || 'unknown',
+    platform: event.platforms?.[0]?.name || 'unknown',
     event_type: event.event_type || 'unknown',
     order_id: event.payload_json?.order_id,
     customer_email: event.payload_json?.Customer?.email,
@@ -423,7 +423,7 @@ export async function getCustomersJourney() {
           customerData.materials = []
         }
         
-        const materialExists = customerData.materials.find(m => 
+        const materialExists = customerData.materials.find((m: any) => 
           m.name === productName && m.date === orderDate.toISOString()
         )
         
@@ -459,7 +459,7 @@ export async function getCustomersJourney() {
       
       // Ordenar materiais por data com tratamento de erro
       if (customer.materials && Array.isArray(customer.materials)) {
-        customer.materials.sort((a, b) => {
+        customer.materials.sort((a: any, b: any) => {
           try {
             const dateA = new Date(a.date).getTime()
             const dateB = new Date(b.date).getTime()

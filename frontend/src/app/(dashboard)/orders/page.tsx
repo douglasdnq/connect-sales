@@ -485,7 +485,7 @@ export default function Orders() {
                   Limpar Todos Filtros
                 </button>
                 <button
-                  onClick={fetchOrders}
+                  onClick={() => fetchOrders()}
                   disabled={loading}
                   className="px-4 py-3 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-xl transition-colors duration-200 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
