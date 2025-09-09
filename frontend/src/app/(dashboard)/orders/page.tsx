@@ -1,9 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Search, Eye, Calendar, User, Package, DollarSign, Trash2, CalendarDays, RefreshCw, Upload, X } from 'lucide-react'
 import { getOrders, deleteEvent } from '@/lib/database'
 import WebhookDetailsModal from '@/components/WebhookDetailsModal'
+import ImportModal from '@/components/ImportModal'
+import DeleteModal from '@/components/DeleteModal'
 
 export default function Orders() {
   const [orders, setOrders] = useState<any[]>([])
@@ -11,29 +13,32 @@ export default function Orders() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [platformFilter, setPlatformFilter] = useState<string>('all')
+  const [productFilter, setProductFilter] = useState<string>('all')
   const [originFilter, setOriginFilter] = useState<string>('all') // all, imported, webhook
   const [selectedOrder, setSelectedOrder] = useState<any>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [startDate, setStartDate] = useState('')
-  const [endDate, setEndDate] = useState('')
+  const [dateRange, setDateRange] = useState({ start: '', end: '' })
+  const [showDatePicker, setShowDatePicker] = useState(false)
+  const datePickerRef = useRef<HTMLDivElement>(null)
+  const dateButtonRef = useRef<HTMLButtonElement>(null)
   const [dateError, setDateError] = useState('')
   const [importModalOpen, setImportModalOpen] = useState(false)
-  const [uploadFile, setUploadFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
-  const [selectedPlatform, setSelectedPlatform] = useState('kiwify')
   const [selectedOrders, setSelectedOrders] = useState<string[]>([])
   const [selectAll, setSelectAll] = useState(false)
   const [bulkDeleting, setBulkDeleting] = useState(false)
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
-  const [deleteConfirmationText, setDeleteConfirmationText] = useState('')
+  const [showSingleDeleteModal, setShowSingleDeleteModal] = useState(false)
+  const [orderToDelete, setOrderToDelete] = useState<any>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage, setItemsPerPage] = useState(10)
+  const [datePickerPosition, setDatePickerPosition] = useState({ top: 0, left: 0 })
 
   const fetchOrders = async (start?: string, end?: string) => {
     setLoading(true)
     try {
-      const dateStart = start !== undefined ? start : startDate
-      const dateEnd = end !== undefined ? end : endDate
+      const dateStart = start !== undefined ? start : dateRange.start
+      const dateEnd = end !== undefined ? end : dateRange.end
       
       const { data, error } = await getOrders(undefined, dateStart, dateEnd)
       if (error) {
@@ -50,7 +55,7 @@ export default function Orders() {
 
   useEffect(() => {
     // Validar datas
-    if (startDate && endDate && endDate < startDate) {
+    if (dateRange.start && dateRange.end && dateRange.end < dateRange.start) {
       setDateError('Data fim deve ser maior ou igual à data início')
       return
     }
@@ -61,11 +66,15 @@ export default function Orders() {
     // 1. Não há datas definidas (buscar todos)
     // 2. Há data início E data fim definidas 
     // 3. Data fim é maior ou igual à data início
-    if ((!startDate && !endDate) || 
-        (startDate && endDate && endDate >= startDate)) {
-      fetchOrders(startDate, endDate)
+    if ((!dateRange.start && !dateRange.end) || 
+        (dateRange.start && dateRange.end && dateRange.end >= dateRange.start)) {
+      fetchOrders(dateRange.start, dateRange.end)
     }
-  }, [startDate, endDate])
+  }, [dateRange.start, dateRange.end])
+
+  // Obter lista única de produtos para o filtro
+  const uniqueProducts = Array.from(new Set(orders.map(order => order.product_name).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b))
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = order.platform_order_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -74,10 +83,11 @@ export default function Orders() {
                          order.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
     const matchesPlatform = platformFilter === 'all' || order.platform_name?.toLowerCase() === platformFilter.toLowerCase()
+    const matchesProduct = productFilter === 'all' || order.product_name === productFilter
     const matchesOrigin = originFilter === 'all' || 
                          (originFilter === 'imported' && order.is_imported) ||
                          (originFilter === 'webhook' && !order.is_imported)
-    return matchesSearch && matchesStatus && matchesPlatform && matchesOrigin
+    return matchesSearch && matchesStatus && matchesPlatform && matchesProduct && matchesOrigin
   })
 
 
@@ -91,7 +101,21 @@ export default function Orders() {
   // Reset página quando filtros mudam
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, statusFilter, platformFilter, originFilter, startDate, endDate, itemsPerPage])
+  }, [searchTerm, statusFilter, platformFilter, productFilter, originFilter, dateRange.start, dateRange.end, itemsPerPage])
+
+  // Fechar date picker quando clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+        setShowDatePicker(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const formatCurrency = (value?: number) => {
     if (!value) return 'R$ 0,00'
@@ -128,24 +152,27 @@ export default function Orders() {
     setModalOpen(true)
   }
 
-  const handleDeleteOrder = async (order: any) => {
-    if (!confirm(`Tem certeza que deseja excluir o pedido ${order.platform_order_id}?`)) {
-      return
-    }
+  const handleDeleteOrder = (order: any) => {
+    setOrderToDelete(order)
+    setShowSingleDeleteModal(true)
+  }
+
+  const handleSingleDelete = async () => {
+    if (!orderToDelete) return { success: false, message: 'Nenhum pedido selecionado' }
 
     try {
-      const { error } = await deleteEvent(order.id)
+      const { error } = await deleteEvent(orderToDelete.id)
       if (error) {
         console.error('Erro ao excluir pedido:', error)
-        alert('Erro ao excluir pedido. Verifique o console.')
+        return { success: false, message: 'Erro ao excluir pedido. Verifique o console.' }
       } else {
         // Recarregar a lista após exclusão
-        setOrders(orders.filter(o => o.id !== order.id))
-        alert('Pedido excluído com sucesso!')
+        setOrders(orders.filter(o => o.id !== orderToDelete.id))
+        return { success: true, message: 'Pedido excluído com sucesso!', deletedCount: 1 }
       }
     } catch (error) {
       console.error('Erro ao excluir pedido:', error)
-      alert('Erro inesperado ao excluir pedido.')
+      return { success: false, message: 'Erro inesperado ao excluir pedido.' }
     }
   }
 
@@ -180,11 +207,6 @@ export default function Orders() {
   }
 
   const handleFilterBasedDelete = async () => {
-    if (deleteConfirmationText !== 'excluir') {
-      alert('Digite "excluir" para confirmar a exclusão')
-      return
-    }
-
     setBulkDeleting(true)
     try {
       // Pegar todos os IDs dos pedidos filtrados
@@ -199,16 +221,14 @@ export default function Orders() {
       const result = await response.json()
       
       if (result.success) {
-        alert(`${result.deletedCount} registros excluídos com sucesso!`)
-        setShowBulkDeleteModal(false)
-        setDeleteConfirmationText('')
         await fetchOrders() // Recarregar dados
+        return { success: true, message: `${result.deletedCount} registros excluídos com sucesso!`, deletedCount: result.deletedCount }
       } else {
-        alert('Erro ao excluir registros: ' + result.error)
+        return { success: false, message: 'Erro ao excluir registros: ' + result.error }
       }
     } catch (error) {
       console.error('Erro na exclusão baseada em filtros:', error)
-      alert('Erro ao excluir registros')
+      return { success: false, message: 'Erro ao excluir registros' }
     } finally {
       setBulkDeleting(false)
     }
@@ -232,17 +252,12 @@ export default function Orders() {
     }
   }
 
-  const handleImportCSV = async () => {
-    if (!uploadFile) {
-      alert('Selecione um arquivo CSV primeiro')
-      return
-    }
-
+  const handleImportCSV = async (file: File, platform: string) => {
     setImporting(true)
     try {
       const formData = new FormData()
-      formData.append('file', uploadFile)
-      formData.append('platform', selectedPlatform)
+      formData.append('file', file)
+      formData.append('platform', platform)
 
       const response = await fetch('/api/import-csv', {
         method: 'POST',
@@ -252,16 +267,14 @@ export default function Orders() {
       const result = await response.json()
 
       if (response.ok) {
-        alert(`Importação concluída: ${result.inserted} pedidos inseridos`)
-        setImportModalOpen(false)
-        setUploadFile(null)
         fetchOrders() // Recarregar pedidos
+        return { success: true, message: `Importação concluída com sucesso!`, inserted: result.inserted }
       } else {
-        alert(`Erro na importação: ${result.error}`)
+        return { success: false, message: `Erro na importação: ${result.error}` }
       }
     } catch (error) {
       console.error('Erro na importação:', error)
-      alert('Erro inesperado na importação')
+      return { success: false, message: 'Erro inesperado na importação' }
     } finally {
       setImporting(false)
     }
@@ -282,21 +295,12 @@ export default function Orders() {
           <h1 className="text-3xl font-bold text-gray-900">Pedidos</h1>
           <div className="flex items-center gap-2">
             <p className="text-gray-600">Gerencie todos os pedidos recebidos via webhooks</p>
-            {(startDate || endDate) && (
+            {(dateRange.start || dateRange.end) && (
               <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                 Filtrado por período
               </span>
             )}
           </div>
-        </div>
-        <div>
-          <button
-            onClick={() => setImportModalOpen(true)}
-            className="btn-primary flex items-center gap-2"
-          >
-            <Upload className="h-4 w-4" />
-            Importar CSV
-          </button>
         </div>
       </div>
 
@@ -353,7 +357,104 @@ export default function Orders() {
       <div className="card">
         <div className="card-content">
           <div className="flex flex-col gap-4">
-            {/* Primeira linha - Busca e Status */}
+            {/* Primeira linha - Período e Filtros principais */}
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="w-full sm:flex-1">
+                <div className="relative">
+                  <CalendarDays className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <button
+                    ref={dateButtonRef}
+                    onClick={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      setDatePickerPosition({
+                        top: rect.bottom + window.scrollY + 8,
+                        left: rect.left + window.scrollX
+                      })
+                      setShowDatePicker(!showDatePicker)
+                    }}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-left whitespace-nowrap overflow-hidden"
+                  >
+                    {(() => {
+                      if (dateRange.start && dateRange.end) {
+                        const startDate = new Date(dateRange.start + 'T00:00:00')
+                        const endDate = new Date(dateRange.end + 'T00:00:00')
+                        const startStr = startDate.toLocaleDateString('pt-BR')
+                        const endStr = endDate.toLocaleDateString('pt-BR')
+                        return (
+                          <span className="truncate">
+                            {startStr} - {endStr}
+                          </span>
+                        )
+                      } else if (dateRange.start) {
+                        const startDate = new Date(dateRange.start + 'T00:00:00')
+                        return `Desde ${startDate.toLocaleDateString('pt-BR')}`
+                      }
+                      return 'Selecionar período...'
+                    })()}
+                  </button>
+                </div>
+                {dateError && (
+                  <div className="text-sm text-red-600 mt-2 px-1">
+                    ⚠️ {dateError}
+                  </div>
+                )}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2 sm:flex-1">
+                <select
+                  className="w-full sm:flex-1 px-3 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-sm"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                >
+                  <option value="all">Status</option>
+                  <option value="paid">Pago</option>
+                  <option value="pending">Pendente</option>
+                  <option value="refunded">Reembolsado</option>
+                  <option value="chargeback">Chargeback</option>
+                  <option value="canceled">Cancelado</option>
+                </select>
+                <select
+                  className="w-full sm:flex-1 px-3 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-sm"
+                  value={platformFilter}
+                  onChange={(e) => setPlatformFilter(e.target.value)}
+                >
+                  <option value="all">Plataformas</option>
+                  <option value="kiwify">🟢 Kiwify</option>
+                  <option value="dmg">🔵 Digital Manager Guru</option>
+                  <option value="voomp">🟣 Voomp</option>
+                  <option value="cademi">🟡 Cademi</option>
+                </select>
+                <select
+                  className="w-full sm:flex-1 px-3 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-sm"
+                  value={productFilter}
+                  onChange={(e) => setProductFilter(e.target.value)}
+                >
+                  <option value="all">Produtos ({uniqueProducts.length})</option>
+                  {uniqueProducts.map(product => (
+                    <option key={product} value={product}>
+                      {product.length > 30 ? product.substring(0, 27) + '...' : product}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  className="w-full sm:flex-1 px-3 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200 text-sm"
+                  value={originFilter}
+                  onChange={(e) => setOriginFilter(e.target.value)}
+                >
+                  <option value="all">Origens</option>
+                  <option value="imported">📥 Importado (CSV)</option>
+                  <option value="webhook">🔗 Webhook (Tempo Real)</option>
+                </select>
+              </div>
+              
+              {/* Indicador quando falta definir data fim */}
+              {dateRange.start && !dateRange.end && (
+                <div className="flex items-center px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 text-sm">
+                  ⏳ Defina a data fim para filtrar
+                </div>
+              )}
+            </div>
+
+            {/* Segunda linha - Busca e Ações */}
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1">
                 <div className="relative">
@@ -367,113 +468,36 @@ export default function Orders() {
                   />
                 </div>
               </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <select
-                  className="w-full sm:w-auto px-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                  <option value="all">Todos os Status</option>
-                  <option value="paid">Pago</option>
-                  <option value="pending">Pendente</option>
-                  <option value="refunded">Reembolsado</option>
-                  <option value="chargeback">Chargeback</option>
-                  <option value="canceled">Cancelado</option>
-                </select>
-                <select
-                  className="w-full sm:w-auto px-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                  value={platformFilter}
-                  onChange={(e) => setPlatformFilter(e.target.value)}
-                >
-                  <option value="all">Todas as Plataformas</option>
-                  <option value="kiwify">🟢 Kiwify</option>
-                  <option value="dmg">🔵 Digital Manager Guru</option>
-                  <option value="voomp">🟣 Voomp</option>
-                  <option value="cademi">🟡 Cademi</option>
-                </select>
-                <select
-                  className="w-full sm:w-auto px-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                  value={originFilter}
-                  onChange={(e) => setOriginFilter(e.target.value)}
-                >
-                  <option value="all">Todas as Origens</option>
-                  <option value="imported">📥 Importado (CSV)</option>
-                  <option value="webhook">🔗 Webhook (Tempo Real)</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Segunda linha - Filtro por período */}
-            <div className="flex flex-col sm:flex-row gap-4 items-end">
-              <div className="flex-1">
-                <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-2">
-                  Data Início
-                </label>
-                <div className="relative">
-                  <CalendarDays className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <input
-                    id="startDate"
-                    type="date"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex-1">
-                <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-2">
-                  Data Fim
-                </label>
-                <div className="relative">
-                  <CalendarDays className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <input
-                    id="endDate"
-                    type="date"
-                    className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                  />
-                </div>
-                {dateError && (
-                  <div className="text-sm text-red-600 mt-2 px-1">
-                    ⚠️ {dateError}
-                  </div>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setStartDate('')
-                    setEndDate('')
-                    setDateError('')
-                  }}
-                  className="px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl transition-colors duration-200 whitespace-nowrap"
-                >
-                  Limpar Datas
-                </button>
-                {startDate && !endDate && (
-                  <div className="flex items-center px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-xl text-yellow-700 text-sm">
-                    ⏳ Defina a data fim para filtrar
-                  </div>
-                )}
-                {startDate && endDate && endDate >= startDate && (
-                  <div className="flex items-center px-3 py-2 bg-green-50 border border-green-200 rounded-xl text-green-700 text-sm">
-                    ✅ Filtro de período ativo
-                  </div>
-                )}
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={() => {
                     setSearchTerm('')
                     setStatusFilter('all')
                     setPlatformFilter('all')
+                    setProductFilter('all')
                     setOriginFilter('all')
-                    setStartDate('')
-                    setEndDate('')
+                    setDateRange({ start: '', end: '' })
                     setDateError('')
+                    setShowDatePicker(false)
                   }}
                   className="px-4 py-3 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-xl transition-colors duration-200 whitespace-nowrap"
                 >
                   Limpar Todos Filtros
+                </button>
+                <button
+                  onClick={fetchOrders}
+                  disabled={loading}
+                  className="px-4 py-3 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-xl transition-colors duration-200 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                  Atualizar
+                </button>
+                <button
+                  onClick={() => setImportModalOpen(true)}
+                  className="px-4 py-3 bg-green-100 hover:bg-green-200 text-green-700 rounded-xl transition-colors duration-200 whitespace-nowrap flex items-center gap-2"
+                >
+                  <Upload className="h-4 w-4" />
+                  Importar CSV
                 </button>
                 {selectedOrders.length > 0 && (
                   <button
@@ -485,7 +509,7 @@ export default function Orders() {
                     {bulkDeleting ? 'Excluindo...' : `Excluir ${selectedOrders.length} selecionados`}
                   </button>
                 )}
-                {(platformFilter !== 'all' || statusFilter !== 'all' || originFilter !== 'all' || searchTerm.trim() || startDate || endDate) && filteredOrders.length > 0 && (
+                {(platformFilter !== 'all' || statusFilter !== 'all' || productFilter !== 'all' || originFilter !== 'all' || searchTerm.trim() || dateRange.start || dateRange.end) && filteredOrders.length > 0 && (
                   <button
                     onClick={() => setShowBulkDeleteModal(true)}
                     disabled={bulkDeleting}
@@ -495,14 +519,6 @@ export default function Orders() {
                     Excluir Filtrados ({filteredOrders.length})
                   </button>
                 )}
-                <button
-                  onClick={fetchOrders}
-                  disabled={loading}
-                  className="px-4 py-3 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-xl transition-colors duration-200 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-                  Atualizar
-                </button>
               </div>
             </div>
           </div>
@@ -528,7 +544,7 @@ export default function Orders() {
                     <th className="w-12 px-3 py-4 text-left">
                       <input
                         type="checkbox"
-                        checked={selectAll && selectedOrders.length === filteredOrders.length}
+                        checked={selectAll}
                         onChange={(e) => handleSelectAll(e.target.checked)}
                         className="w-4 h-4"
                       />
@@ -764,98 +780,63 @@ export default function Orders() {
         </div>
       </div>
 
-      {/* Modal de confirmação de exclusão em massa */}
-      {showBulkDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="h-6 w-6 text-red-600" />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Confirmação de Exclusão
-                </h3>
-                <p className="text-sm text-gray-500">
-                  Esta ação não pode ser desfeita
-                </p>
-              </div>
-            </div>
 
-            <div className="mb-6">
-              <p className="text-gray-700 mb-4">
-                Você está prestes a excluir <strong>{filteredOrders.length} registros</strong> que correspondem aos filtros ativos:
-              </p>
-              <div className="bg-gray-50 rounded-lg p-3 text-sm space-y-1">
-                {platformFilter !== 'all' && (
-                  <div>• <strong>Plataforma:</strong> {platformFilter}</div>
-                )}
-                {statusFilter !== 'all' && (
-                  <div>• <strong>Status:</strong> {statusFilter}</div>
-                )}
-                {originFilter !== 'all' && (
-                  <div>• <strong>Origem:</strong> {originFilter === 'imported' ? 'Importado (CSV)' : 'Webhook (Tempo Real)'}</div>
-                )}
-                {startDate && (
-                  <div>• <strong>Data início:</strong> {startDate}</div>
-                )}
-                {endDate && (
-                  <div>• <strong>Data fim:</strong> {endDate}</div>
-                )}
-                {searchTerm.trim() && (
-                  <div>• <strong>Busca:</strong> "{searchTerm}"</div>
-                )}
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Para confirmar, digite <strong>"excluir"</strong> no campo abaixo:
+      {/* Portal do Calendário */}
+      {showDatePicker && (
+        <div 
+          ref={datePickerRef} 
+          className="fixed bg-white border border-gray-200 rounded-xl shadow-lg p-4 min-w-80"
+          style={{
+            top: `${datePickerPosition.top}px`,
+            left: `${datePickerPosition.left}px`,
+            zIndex: 9999
+          }}
+        >
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Data Início
               </label>
               <input
-                type="text"
-                value={deleteConfirmationText}
-                onChange={(e) => setDeleteConfirmationText(e.target.value)}
-                placeholder="Digite: excluir"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                autoComplete="off"
+                type="date"
+                value={dateRange.start}
+                onChange={(e) => setDateRange({...dateRange, start: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
               />
             </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowBulkDeleteModal(false)
-                  setDeleteConfirmationText('')
-                }}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                disabled={bulkDeleting}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleFilterBasedDelete}
-                disabled={deleteConfirmationText !== 'excluir' || bulkDeleting}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                {bulkDeleting ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Excluindo...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4" />
-                    Excluir {filteredOrders.length} Registros
-                  </>
-                )}
-              </button>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Data Fim
+              </label>
+              <input
+                type="date"
+                value={dateRange.end}
+                onChange={(e) => setDateRange({...dateRange, end: e.target.value})}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+              />
             </div>
+          </div>
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => {
+                setDateRange({ start: '', end: '' })
+                setShowDatePicker(false)
+              }}
+              className="text-sm text-gray-600 hover:text-gray-800"
+            >
+              Limpar
+            </button>
+            <button
+              onClick={() => setShowDatePicker(false)}
+              className="text-sm bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600"
+            >
+              Fechar
+            </button>
           </div>
         </div>
       )}
 
-      {/* Modal de detalhes do webhook */}
+      {/* Modais */}
       {selectedOrder && (
         <WebhookDetailsModal
           isOpen={modalOpen}
@@ -870,132 +851,44 @@ export default function Orders() {
         />
       )}
 
-      {/* Modal de importação CSV */}
-      {importModalOpen && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md border border-white/20">
-            {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-gray-200/60">
-              <h2 className="text-xl font-bold text-gray-900">Importar CSV da Kiwify</h2>
-              <button
-                onClick={() => {
-                  setImportModalOpen(false)
-                  setUploadFile(null)
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
+      <ImportModal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImport={handleImportCSV}
+        importing={importing}
+      />
 
-            {/* Content */}
-            <div className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Plataforma
-                  </label>
-                  <select
-                    value={selectedPlatform}
-                    onChange={(e) => setSelectedPlatform(e.target.value)}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                  >
-                    <option value="kiwify">Kiwify</option>
-                    <option value="dmg">Digital Manager Guru (DMG)</option>
-                    <option value="cademi">Cademi</option>
-                    <option value="voomp">Voomp</option>
-                  </select>
-                </div>
+      <DeleteModal
+        isOpen={showSingleDeleteModal}
+        onClose={() => {
+          setShowSingleDeleteModal(false)
+          setOrderToDelete(null)
+        }}
+        onDelete={handleSingleDelete}
+        deleting={bulkDeleting}
+        title="Excluir Pedido"
+        itemCount={1}
+        filters={{}}
+      />
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Arquivo CSV
-                  </label>
-                  <input
-                    type="file"
-                    accept=".csv"
-                    onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
-                    className="w-full p-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-                  />
-                  {uploadFile && (
-                    <p className="text-sm text-gray-600 mt-2">
-                      Arquivo selecionado: {uploadFile.name}
-                    </p>
-                  )}
-                </div>
+      <DeleteModal
+        isOpen={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onDelete={handleFilterBasedDelete}
+        deleting={bulkDeleting}
+        title="Exclusão em Massa"
+        itemCount={filteredOrders.length}
+        filters={{
+          platform: platformFilter !== 'all' ? platformFilter : undefined,
+          status: statusFilter !== 'all' ? statusFilter : undefined,
+          product: productFilter !== 'all' ? productFilter : undefined,
+          origin: originFilter !== 'all' ? originFilter : undefined,
+          dateStart: dateRange.start || undefined,
+          dateEnd: dateRange.end || undefined,
+          search: searchTerm.trim() || undefined
+        }}
+      />
 
-                <div className="bg-blue-50 p-4 rounded-xl">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">
-                    Campos esperados - {selectedPlatform === 'kiwify' ? 'Kiwify' : selectedPlatform === 'dmg' ? 'DMG' : selectedPlatform === 'cademi' ? 'Cademi' : 'Voomp'}:
-                  </h4>
-                  {selectedPlatform === 'kiwify' && (
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• <strong>ID da venda</strong> (ID único do pedido)</li>
-                      <li>• <strong>Status</strong> (paid, waiting_payment, etc.)</li>
-                      <li>• <strong>Produto</strong> (Nome do produto)</li>
-                      <li>• <strong>Cliente</strong> (Nome do cliente)</li>
-                      <li>• <strong>Email</strong> (Email do cliente)</li>
-                      <li>• <strong>Valor líquido</strong> (Sua comissão em reais)</li>
-                      <li>• <strong>Preço base do produto</strong> (Preço total)</li>
-                      <li>• <strong>Data de Criação</strong> (Data do pedido)</li>
-                    </ul>
-                  )}
-                  {selectedPlatform === 'dmg' && (
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• Campos específicos do DMG serão mapeados</li>
-                      <li>• Entre em contato para configurar o mapeamento</li>
-                    </ul>
-                  )}
-                  {selectedPlatform === 'cademi' && (
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• Campos específicos da Cademi serão mapeados</li>
-                      <li>• Entre em contato para configurar o mapeamento</li>
-                    </ul>
-                  )}
-                  {selectedPlatform === 'voomp' && (
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• Campos específicos da Voomp serão mapeados</li>
-                      <li>• Entre em contato para configurar o mapeamento</li>
-                    </ul>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="border-t border-gray-200/60 p-6 bg-gray-50/50 rounded-b-2xl">
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    setImportModalOpen(false)
-                    setUploadFile(null)
-                  }}
-                  className="btn-secondary"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleImportCSV}
-                  disabled={!uploadFile || importing}
-                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  {importing ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      Importando...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4" />
-                      Importar
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }
