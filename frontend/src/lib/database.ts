@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Order, Customer, RawEvent, EventError, Platform, AdInsight, Goal } from './supabase'
+import type { Order, Customer, RawEvent, EventError, Platform, AdInsight, Goal, Lead } from './supabase'
 
 // Dashboard data fetching
 export async function getDashboardStats() {
@@ -704,4 +704,91 @@ export async function getGoalProgress(month: number, year: number) {
     },
     error: null
   }
+}
+
+// Leads functions
+export async function getLeads(limit = 50, status?: string) {
+  let query = supabase
+    .from('leads')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (status) {
+    query = query.eq('status', status)
+  }
+
+  return await query
+}
+
+export async function getLeadById(id: string) {
+  return await supabase
+    .from('leads')
+    .select('*')
+    .eq('id', id)
+    .single()
+}
+
+export async function updateLeadStatus(id: string, status: Lead['status'], notes?: string) {
+  const updateData: any = { 
+    status,
+    updated_at: new Date().toISOString()
+  }
+
+  return await supabase
+    .from('leads')
+    .update(updateData)
+    .eq('id', id)
+    .select()
+    .single()
+}
+
+export async function convertLeadToCustomer(leadId: string, customerId: string) {
+  return await supabase
+    .from('leads')
+    .update({
+      status: 'converted',
+      converted_to_customer_id: customerId,
+      converted_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', leadId)
+    .select()
+    .single()
+}
+
+export async function getLeadStats(days = 30) {
+  const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+  
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .gte('created_at', startDate)
+
+  if (error) return { data: null, error }
+
+  const stats = {
+    totalLeads: data.length,
+    newLeads: data.filter(l => l.status === 'new').length,
+    contactedLeads: data.filter(l => l.status === 'contacted').length,
+    qualifiedLeads: data.filter(l => l.status === 'qualified').length,
+    convertedLeads: data.filter(l => l.status === 'converted').length,
+    lostLeads: data.filter(l => l.status === 'lost').length,
+    conversionRate: data.length > 0 ? ((data.filter(l => l.status === 'converted').length / data.length) * 100).toFixed(1) : '0.0',
+    avgScore: data.filter(l => l.score).length > 0 
+      ? (data.filter(l => l.score).reduce((sum, l) => sum + (l.score || 0), 0) / data.filter(l => l.score).length).toFixed(1)
+      : '0.0',
+    sources: data.reduce((acc, lead) => {
+      const source = lead.utm_source || 'unknown'
+      acc[source] = (acc[source] || 0) + 1
+      return acc
+    }, {} as Record<string, number>),
+    campaigns: data.reduce((acc, lead) => {
+      const campaign = lead.utm_campaign || 'unknown'
+      acc[campaign] = (acc[campaign] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+  }
+
+  return { data: stats, error: null }
 }

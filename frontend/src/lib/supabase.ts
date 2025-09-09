@@ -67,3 +67,50 @@ export type AdInsight = {
   leads?: number
   created_at: string
 }
+
+export type Goal = {
+  id: number
+  month: number
+  year: number
+  dza_sales_target: number
+  mentoria_sales_target: number
+  dza_revenue_target: number
+  mentoria_revenue_target: number
+  global_revenue_target: number
+  created_at: string
+  updated_at: string
+}
+
+export type Lead = {
+  id: string
+  full_name?: string
+  whatsapp?: string
+  email?: string
+  age?: number
+  education?: string
+  work_situation?: string
+  happy_with_work?: string
+  salary_range?: string
+  fiscal_study_moment?: string
+  study_time_dedication?: string
+  why_mentoria_ideal?: string
+  why_deserve_spot?: string
+  investment_type?: string
+  priority_start?: string
+  score?: number
+  form_id?: string
+  form_date?: string
+  utm_source?: string
+  utm_medium?: string
+  utm_campaign?: string
+  utm_term?: string
+  utm_content?: string
+  gclid?: string
+  fbclid?: string
+  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'lost'
+  lead_source: string
+  converted_to_customer_id?: string
+  converted_at?: string
+  created_at: string
+  updated_at: string
+}
