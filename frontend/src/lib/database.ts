@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import type { Order, Customer, RawEvent, EventError, Platform, AdInsight } from './supabase'
+import type { Order, Customer, RawEvent, EventError, Platform, AdInsight, Goal } from './supabase'
 
 // Dashboard data fetching
 export async function getDashboardStats() {
@@ -115,15 +115,15 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
       order_date: event.received_at,
       created_at: event.received_at,
       status: (() => {
-        const orderStatus = event.payload_json?.order_status?.toLowerCase()
+        const currentOrderStatus = event.payload_json?.order_status?.toLowerCase()
         const webhookEvent = event.payload_json?.webhook_event_type?.toLowerCase()
         
         // Mapear status baseado nos campos da Kiwify
-        if (orderStatus === 'approved' || webhookEvent?.includes('approved')) return 'paid'
-        if (orderStatus === 'paid' || webhookEvent?.includes('paid')) return 'paid'
-        if (orderStatus === 'refunded' || webhookEvent?.includes('refund')) return 'refunded'
-        if (orderStatus === 'canceled' || webhookEvent?.includes('cancel')) return 'canceled'
-        if (orderStatus === 'chargeback' || webhookEvent?.includes('chargeback')) return 'chargeback'
+        if (currentOrderStatus === 'approved' || webhookEvent?.includes('approved')) return 'paid'
+        if (currentOrderStatus === 'paid' || webhookEvent?.includes('paid')) return 'paid'
+        if (currentOrderStatus === 'refunded' || webhookEvent?.includes('refund')) return 'refunded'
+        if (currentOrderStatus === 'canceled' || webhookEvent?.includes('cancel')) return 'canceled'
+        if (currentOrderStatus === 'chargeback' || webhookEvent?.includes('chargeback')) return 'chargeback'
         
         return 'pending' // default
       })(),
@@ -290,116 +290,418 @@ export async function getAdInsights(days = 30) {
 
 // Análise de jornada do cliente (DZA → Mentoria)
 export async function getCustomersJourney() {
-  const { data, error } = await supabase
-    .from('raw_events')
-    .select(`
-      id,
-      payload_json,
-      received_at,
-      platforms(name)
-    `)
-    .order('received_at', { ascending: false })
+  // Buscar todos os eventos com paginação automática
+  let allData: any[] = []
+  let hasMore = true
+  let from = 0
+  const pageSize = 1000
 
-  if (error) return { data: null, error }
+  while (hasMore) {
+    const { data: pageData, error: pageError } = await supabase
+      .from('raw_events')
+      .select(`
+        id,
+        payload_json,
+        received_at,
+        platforms(name)
+      `)
+      .order('received_at', { ascending: false })
+      .range(from, from + pageSize - 1)
+
+    if (pageError) return { data: null, error: pageError }
+
+    if (pageData && pageData.length > 0) {
+      allData = [...allData, ...pageData]
+      from += pageSize
+      hasMore = pageData.length === pageSize
+    } else {
+      hasMore = false
+    }
+
+    // Limite de segurança
+    if (allData.length > 20000) {
+      console.warn('Limite de segurança atingido: 20.000 registros')
+      break
+    }
+  }
+
+  const data = allData
+  const error = null
 
   // Processar dados para análise de jornada
   const customerMap = new Map()
 
   data?.forEach(event => {
-    const customer = event.payload_json?.Customer
-    if (!customer) return
+    try {
+      const customer = event.payload_json?.Customer
+      if (!customer) return
 
-    // Usar CPF como identificador principal, fallback para email se não houver CPF
-    const cpf = customer.cpf?.replace(/[^\d]/g, '') // Limpar formatação do CPF
-    const email = customer.email?.toLowerCase() || ''
-    const primaryKey = cpf || email
-    
-    if (!primaryKey) return // Pular se não tiver nem CPF nem email
-
-    const productName = event.payload_json?.Product?.product_name || ''
-    const orderDate = new Date(event.received_at)
-    const phone = customer.phone_number || ''
-    const fullName = customer.full_name || ''
-    const platformName = event.platforms?.name?.toLowerCase() || ''
-
-    if (!customerMap.has(primaryKey)) {
-      customerMap.set(primaryKey, {
-        name: fullName,
-        email: email,
-        phone: phone,
-        cpf: cpf || null,
-        dzaDate: null,
-        mentoriaDate: null,
-        materials: [],
-        daysBetween: null
-      })
-    }
-
-    const customerData = customerMap.get(primaryKey)
-    
-    // Atualizar informações do cliente se necessário (nome e telefone mais completos)
-    if (fullName && fullName.length > customerData.name.length) {
-      customerData.name = fullName
-    }
-    if (phone && !customerData.phone) {
-      customerData.phone = phone
-    }
-    if (email && !customerData.email) {
-      customerData.email = email
-    }
-
-    // DZA vem da Kiwify
-    if (platformName === 'kiwify' && 
-        (productName.toLowerCase().includes('dza') || 
-         productName.toLowerCase().includes('treinamento'))) {
-      if (!customerData.dzaDate || orderDate < new Date(customerData.dzaDate)) {
-        customerData.dzaDate = orderDate.toISOString()
+      // Usar CPF como identificador principal, fallback para email se não houver CPF
+      const cpf = customer.cpf?.replace(/[^\d]/g, '') || '' // Limpar formatação do CPF
+      const email = customer.email?.toLowerCase().trim() || ''
+      
+      // Sempre usar email como chave principal se disponível, pois é mais consistente
+      // CPF às vezes está null em algumas compras do mesmo cliente
+      let primaryKey = ''
+      if (email && email.includes('@')) {
+        primaryKey = `email:${email}`
+      } else if (cpf && cpf.length >= 10) {
+        primaryKey = `cpf:${cpf}`
       }
-    }
+      
+      if (!primaryKey) return // Pular se não tiver identificador válido
 
-    // Mentoria vem da DMG (Digital Manager)
-    if (platformName === 'dmg' && 
-        (productName.toLowerCase().includes('mentoria') || 
-         productName.toLowerCase().includes('individual'))) {
-      if (!customerData.mentoriaDate || orderDate < new Date(customerData.mentoriaDate)) {
-        customerData.mentoriaDate = orderDate.toISOString()
+      const productName = event.payload_json?.Product?.product_name || ''
+      const orderDate = new Date(event.received_at)
+      const phone = customer.phone_number || ''
+      const fullName = customer.full_name || ''
+      const platformName = event.platforms?.name?.toLowerCase() || ''
+
+      // Validar se orderDate é válido
+      if (isNaN(orderDate.getTime())) return
+
+      if (!customerMap.has(primaryKey)) {
+        customerMap.set(primaryKey, {
+          name: fullName,
+          email: email,
+          phone: phone,
+          cpf: cpf || null,
+          dzaDate: null,
+          mentoriaDate: null,
+          materials: [],
+          daysBetween: null
+        })
       }
-    }
 
-    // Adicionar material à lista se não existir
-    if (!customerData.materials.find(m => m.name === productName)) {
-      customerData.materials.push({
-        name: productName,
-        date: orderDate.toISOString(),
-        platform: event.platforms?.name || 'Unknown'
-      })
+      const customerData = customerMap.get(primaryKey)
+      
+      // Atualizar informações do cliente se necessário (manter dados mais completos)
+      if (fullName && fullName.length > customerData.name.length) {
+        customerData.name = fullName
+      }
+      if (phone && !customerData.phone) {
+        customerData.phone = phone
+      }
+      if (email && !customerData.email) {
+        customerData.email = email
+      }
+      // Atualizar CPF se estava vazio e agora temos um
+      if (cpf && !customerData.cpf) {
+        customerData.cpf = cpf
+      }
+
+      // Verificar status do pedido
+      const orderPaymentStatus = event.payload_json?.order_status?.toLowerCase()
+      const webhookEvent = event.payload_json?.webhook_event_type?.toLowerCase()
+      
+      // Considerar apenas pedidos pagos/aprovados
+      const isPaid = orderPaymentStatus === 'approved' || orderPaymentStatus === 'paid' || 
+                    webhookEvent?.includes('approved') || webhookEvent?.includes('paid')
+
+      if (isPaid) {
+        // DZA vem da Kiwify - detectar todas as variações
+        if (platformName === 'kiwify' && 
+            (productName.toLowerCase().includes('dza') || 
+             productName.toLowerCase().includes('do zero a auditor fiscal') ||
+             productName.toLowerCase().includes('treinamento | do zero a auditor fiscal'))) {
+          if (!customerData.dzaDate || orderDate < new Date(customerData.dzaDate)) {
+            customerData.dzaDate = orderDate.toISOString()
+          }
+        }
+
+        // Mentoria vem da DMG (Digital Manager) - detectar todas as variações
+        if (platformName === 'dmg' && 
+            (productName.toLowerCase().includes('mentoria individual') || 
+             productName.toLowerCase().includes('mentoria individual (sem material)'))) {
+          if (!customerData.mentoriaDate || orderDate < new Date(customerData.mentoriaDate)) {
+            customerData.mentoriaDate = orderDate.toISOString()
+          }
+        }
+
+        // Adicionar material à lista se não existir (comparar por nome e data)
+        if (!customerData.materials) {
+          customerData.materials = []
+        }
+        
+        const materialExists = customerData.materials.find(m => 
+          m.name === productName && m.date === orderDate.toISOString()
+        )
+        
+        if (!materialExists) {
+          customerData.materials.push({
+            name: productName,
+            date: orderDate.toISOString(),
+            platform: event.platforms?.name || 'Unknown'
+          })
+        }
+      }
+    } catch (error) {
+      console.warn('Erro ao processar evento na jornada do cliente:', error)
+      // Continuar processamento mesmo com erro
     }
   })
 
+  // Processamento concluído
+  
   // Calcular dias entre DZA e Mentoria
   const customers = Array.from(customerMap.values()).map(customer => {
-    if (customer.dzaDate && customer.mentoriaDate) {
-      const dzaDate = new Date(customer.dzaDate)
-      const mentoriaDate = new Date(customer.mentoriaDate)
-      const diffTime = Math.abs(mentoriaDate.getTime() - dzaDate.getTime())
-      customer.daysBetween = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    try {
+      if (customer.dzaDate && customer.mentoriaDate) {
+        const dzaDate = new Date(customer.dzaDate)
+        const mentoriaDate = new Date(customer.mentoriaDate)
+        
+        // Verificar se as datas são válidas
+        if (!isNaN(dzaDate.getTime()) && !isNaN(mentoriaDate.getTime())) {
+          const diffTime = Math.abs(mentoriaDate.getTime() - dzaDate.getTime())
+          customer.daysBetween = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+        }
+      }
+      
+      // Ordenar materiais por data com tratamento de erro
+      if (customer.materials && Array.isArray(customer.materials)) {
+        customer.materials.sort((a, b) => {
+          try {
+            const dateA = new Date(a.date).getTime()
+            const dateB = new Date(b.date).getTime()
+            if (isNaN(dateA) || isNaN(dateB)) return 0
+            return dateA - dateB
+          } catch (error) {
+            return 0
+          }
+        })
+      }
+      
+      return customer
+    } catch (error) {
+      console.warn('Erro ao processar cliente na jornada:', error)
+      return customer
     }
-    
-    // Ordenar materiais por data
-    customer.materials.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    
-    return customer
   })
 
   // Ordenar por clientes que têm DZA primeiro, depois por data do DZA
   customers.sort((a, b) => {
-    if (a.dzaDate && !b.dzaDate) return -1
-    if (!a.dzaDate && b.dzaDate) return 1
-    if (a.dzaDate && b.dzaDate) {
-      return new Date(b.dzaDate).getTime() - new Date(a.dzaDate).getTime()
+    try {
+      if (a.dzaDate && !b.dzaDate) return -1
+      if (!a.dzaDate && b.dzaDate) return 1
+      if (a.dzaDate && b.dzaDate) {
+        const dateA = new Date(a.dzaDate).getTime()
+        const dateB = new Date(b.dzaDate).getTime()
+        if (!isNaN(dateA) && !isNaN(dateB)) {
+          return dateB - dateA
+        }
+      }
+      const nameA = a.name || ''
+      const nameB = b.name || ''
+      return nameA.localeCompare(nameB)
+    } catch (error) {
+      return 0
     }
-    return a.name.localeCompare(b.name)
   })
 
   return { data: customers, error: null }
+}
+
+// Goals (Metas) functions
+export async function getGoals(month?: number, year?: number) {
+  let query = supabase.from('goals').select('*').order('year', { ascending: false }).order('month', { ascending: false })
+  
+  if (month && year) {
+    query = query.eq('month', month).eq('year', year)
+  }
+  
+  return await query
+}
+
+export async function getCurrentMonthGoal() {
+  const now = new Date()
+  const month = now.getMonth() + 1
+  const year = now.getFullYear()
+  
+  return await supabase
+    .from('goals')
+    .select('*')
+    .eq('month', month)
+    .eq('year', year)
+    .single()
+}
+
+export async function saveGoal(goal: Omit<Goal, 'id' | 'created_at' | 'updated_at'>) {
+  return await supabase
+    .from('goals')
+    .upsert(goal, {
+      onConflict: 'month,year'
+    })
+    .select()
+    .single()
+}
+
+// Função para calcular ascensões reais (clientes que compraram DZA E Mentoria)
+export async function getAscensions(month: number, year: number) {
+  console.log('=== INICIANDO getAscensions ===', { month, year })
+  
+  // Buscar dados da jornada do cliente
+  const { data: customers, error } = await getCustomersJourney()
+  
+  if (error || !customers) {
+    return { data: 0, error }
+  }
+  
+  // Filtrar apenas clientes que têm tanto DZA quanto Mentoria no período especificado
+  const startDate = new Date(year, month - 1, 1)
+  const endDate = new Date(year, month, 0, 23, 59, 59)
+  
+  const ascensions = customers.filter(customer => {
+    if (!customer.dzaDate || !customer.mentoriaDate) return false
+    
+    const mentoriaDate = new Date(customer.mentoriaDate)
+    
+    // Verificar se a mentoria foi comprada no período especificado
+    return mentoriaDate >= startDate && mentoriaDate <= endDate
+  })
+  
+  console.log(`Ascensões encontradas para ${month}/${year}:`, ascensions.length)
+  
+  return { data: ascensions.length, error: null }
+}
+
+export async function getGoalProgress(month: number, year: number) {
+  console.log('=== INICIANDO getGoalProgress ===', { month, year })
+  
+  // Buscar meta do mês
+  const { data: goal, error: goalError } = await supabase
+    .from('goals')
+    .select('*')
+    .eq('month', month)
+    .eq('year', year)
+    .single()
+
+  console.log('Resultado da busca da meta:', { goal, goalError })
+
+  if (goalError || !goal) {
+    return { 
+      error: goalError?.message || 'Meta não encontrada para este período',
+      data: null 
+    }
+  }
+
+  // Usar a mesma lógica da página de pedidos
+  const startDateStr = `${year}-${month.toString().padStart(2, '0')}-01`
+  const endDateStr = `${year}-${month.toString().padStart(2, '0')}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`
+  
+  // Buscar pedidos usando a função existente
+  const { data: orders, error: ordersError } = await getOrders(undefined, startDateStr, endDateStr)
+
+  if (ordersError) {
+    return { 
+      error: ordersError.message,
+      data: null 
+    }
+  }
+
+  console.log('Goal Progress - Orders found:', {
+    totalOrders: orders?.length,
+    dateRange: `${startDateStr} to ${endDateStr}`,
+    sampleOrder: orders?.[0]
+  })
+
+  // Processar apenas pedidos pagos
+  const paidOrders = orders?.filter(order => order.status === 'paid') || []
+
+  // Debug: verificar plataformas disponíveis
+  const platforms = new Set()
+  paidOrders.forEach(order => {
+    platforms.add(order.platform_name || 'Sem plataforma')
+  })
+  console.log('Plataformas encontradas:', Array.from(platforms))
+
+  // Processar dados das vendas
+  let dzaSales = 0
+  let mentoriaSales = 0 
+  let dzaRevenue = 0
+  let mentoriaRevenue = 0
+  let globalRevenue = 0
+
+  let dzaCount = 0
+  let mentoriaCount = 0
+  let uncategorizedCount = 0
+  const platformBreakdown = new Map()
+
+  paidOrders.forEach(order => {
+    const productName = order.product_name?.toLowerCase() || ''
+    const amount = order.net_amount || 0
+    const platform = order.platform_name?.toLowerCase() || ''
+
+    globalRevenue += amount
+
+    // Contabilizar por plataforma para debug
+    if (!platformBreakdown.has(platform)) {
+      platformBreakdown.set(platform, { count: 0, revenue: 0 })
+    }
+    const platformData = platformBreakdown.get(platform)
+    platformData.count++
+    platformData.revenue += amount
+
+    // DZA = APENAS vendas da Kiwify
+    if (platform === 'kiwify') {
+      dzaSales++
+      dzaRevenue += amount
+      dzaCount++
+    }
+    
+    // Mentoria = produtos específicos de mentoria (de qualquer plataforma)
+    if (productName.includes('mentoria') || productName.includes('individual')) {
+      mentoriaSales++
+      mentoriaRevenue += amount
+      mentoriaCount++
+    }
+    
+    // Para debug: produtos não da Kiwify
+    if (platform !== 'kiwify') {
+      uncategorizedCount++
+    }
+  })
+
+  console.log('=== CONTAGEM DETALHADA ===')
+  console.log('Total de pedidos pagos:', paidOrders.length)
+  console.log('Vendas Kiwify (DZA):', dzaCount)
+  console.log('Mentoria vendas:', mentoriaCount)
+  console.log('Outras plataformas:', uncategorizedCount)
+  console.log('--- BREAKDOWN POR PLATAFORMA ---')
+  platformBreakdown.forEach((data, platform) => {
+    console.log(`${platform}: ${data.count} vendas, R$ ${data.revenue.toFixed(2)}`)
+  })
+  console.log('--- FATURAMENTO ---')
+  console.log('DZA Revenue (Kiwify apenas):', dzaRevenue)
+  console.log('Mentoria Revenue (todos produtos mentoria):', mentoriaRevenue)
+  console.log('Global Revenue (original):', globalRevenue)
+  console.log('==========================')
+
+  console.log('Goal Progress - Final results:', {
+    dzaSales,
+    mentoriaSales,
+    dzaRevenue,
+    mentoriaRevenue,
+    globalRevenue
+  })
+
+  return {
+    data: {
+      goal,
+      current: {
+        dza_sales: dzaSales, // Vendas apenas da Kiwify
+        mentoria_sales: mentoriaSales,
+        dza_revenue: dzaRevenue, // Faturamento apenas da Kiwify
+        mentoria_revenue: mentoriaRevenue,
+        global_revenue: globalRevenue
+      },
+      progress: {
+        dza_sales: goal.dza_sales_target > 0 ? (dzaSales / goal.dza_sales_target) * 100 : 0,
+        mentoria_sales: goal.mentoria_sales_target > 0 ? (mentoriaSales / goal.mentoria_sales_target) * 100 : 0,
+        dza_revenue: goal.dza_revenue_target > 0 ? (dzaRevenue / goal.dza_revenue_target) * 100 : 0,
+        mentoria_revenue: goal.mentoria_revenue_target > 0 ? (mentoriaRevenue / goal.mentoria_revenue_target) * 100 : 0,
+        global_revenue: goal.global_revenue_target > 0 ? (globalRevenue / goal.global_revenue_target) * 100 : 0,
+      }
+    },
+    error: null
+  }
 }
