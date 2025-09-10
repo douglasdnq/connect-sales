@@ -459,22 +459,22 @@ export default function LeadsPage() {
                   />
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Lead
+                  Data de Aplicação
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contato
+                  Nome
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Faixa Salarial
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Prioridade
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  WhatsApp
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Fonte
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  UTM
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Data
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
@@ -492,33 +492,34 @@ export default function LeadsPage() {
                       onChange={() => toggleLeadSelection(lead.id)}
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">
-                        {lead.full_name || 'Nome não informado'}
-                      </div>
-                      {lead.age && (
-                        <div className="text-sm text-gray-500">
-                          {lead.age} anos
-                        </div>
-                      )}
-                    </div>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {formatDate(lead.form_date || lead.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="space-y-1">
-                      {lead.email && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Mail className="w-4 h-4 mr-2" />
-                          {lead.email}
-                        </div>
-                      )}
-                      {lead.whatsapp && (
-                        <div className="flex items-center text-sm text-gray-600">
-                          <Phone className="w-4 h-4 mr-2" />
-                          {lead.whatsapp}
-                        </div>
-                      )}
+                    <div className="text-sm font-medium text-gray-900">
+                      {lead.full_name || 'Nome não informado'}
                     </div>
+                    {lead.age && (
+                      <div className="text-sm text-gray-500">
+                        {lead.age} anos
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {lead.salary_range || 'Não informado'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {lead.priority_start || 'Não informado'}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    {lead.whatsapp ? (
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Phone className="w-4 h-4 mr-2" />
+                        {lead.whatsapp}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">Não informado</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
@@ -532,39 +533,6 @@ export default function LeadsPage() {
                       <option value="converted">Convertido</option>
                       <option value="lost">Perdido</option>
                     </select>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {lead.lead_source}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-xs space-y-1">
-                      {lead.utm_source && (
-                        <div className="flex items-center">
-                          <span className="text-gray-500 w-12">Src:</span>
-                          <span className="text-gray-900">{lead.utm_source}</span>
-                        </div>
-                      )}
-                      {lead.utm_medium && (
-                        <div className="flex items-center">
-                          <span className="text-gray-500 w-12">Med:</span>
-                          <span className="text-gray-900">{lead.utm_medium}</span>
-                        </div>
-                      )}
-                      {lead.utm_campaign && (
-                        <div className="flex items-center">
-                          <span className="text-gray-500 w-12">Cam:</span>
-                          <span className="text-gray-900 truncate max-w-24" title={lead.utm_campaign}>
-                            {lead.utm_campaign}
-                          </span>
-                        </div>
-                      )}
-                      {!lead.utm_source && !lead.utm_medium && !lead.utm_campaign && (
-                        <span className="text-gray-400">N/A</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {formatDate(lead.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button 
