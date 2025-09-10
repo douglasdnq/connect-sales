@@ -22,20 +22,80 @@ export async function POST(request: NextRequest) {
 
     for (const row of sheetsData) {
       try {
-        // Os dados já vem mapeados do frontend, então podemos usar diretamente
-        const leadData = {
-          ...row, // Incluir todos os campos mapeados
+        // Mapear campos do formulário para campos da tabela
+        const fieldMapping: {[key: string]: string} = {
+          'Qual seu nome completo?': 'full_name',
+          'Qual seu WhatsApp?': 'whatsapp',
+          'Qual o seu e-mail?': 'email',
+          'E a sua idade?': 'age',
+          'Em que você é formado(a)?': 'education',
+          'Qual é a opção que melhor descreve sua situação profissional?': 'work_situation',
+          'Você é feliz com o seu trabalho atual?': 'happy_with_work',
+          'Qual é a sua faixa de salário atual?': 'salary_range',
+          'Qual é o seu momento em relação aos estudos para Área Fiscal?': 'fiscal_study_moment',
+          'Quanto tempo você pode dedicar aos estudos para se tornar Auditor-Fiscal?': 'study_time_dedication',
+          'Por que você acredita que a Mentoria Tributum é ideal para você agora?': 'why_mentoria_ideal',
+          'Se houvesse apenas 1 vaga na mentoria hoje, por que ela deveria ser sua?': 'why_deserve_spot',
+          'A Mentoria é um programa de alto impacto para acelerar sua aprovação. O investimento atual é de:': 'investment_type',
+          'É uma prioridade para você iniciar sua preparação imediatamente?': 'priority_start',
+          'Pontuação': 'score',
+          'Data': 'form_date',
+          'ID': 'form_id',
+          'Nome': 'full_name',
+          'Email': 'email',
+          'WhatsApp': 'whatsapp',
+          'Idade': 'age',
+          'Formação': 'education'
+        }
+
+        // Criar dados mapeados
+        const leadData: any = {
           lead_source: row.lead_source || 'google-sheets',
           status: row.status || 'new',
           form_date: row.form_date || new Date().toISOString(),
-          // Não sobrescrever UTM se já existe no row
           utm_source: row.utm_source || null,
           utm_medium: row.utm_medium || null,
+          utm_campaign: row.utm_campaign || null,
+          utm_term: row.utm_term || null,
+          utm_content: row.utm_content || null,
+          gclid: row.gclid || null,
+          fbclid: row.fbclid || null,
         }
 
-        // Converter idade para número se necessário
-        if (leadData.age && typeof leadData.age === 'string') {
-          leadData.age = parseInt(leadData.age) || null
+        // Mapear campos do formulário
+        Object.entries(row).forEach(([key, value]) => {
+          const mappedField = fieldMapping[key] || key.toLowerCase().replace(/\s+/g, '_')
+          if (value !== undefined && value !== null && value !== '') {
+            leadData[mappedField] = value
+          }
+        })
+
+        // Converter idade para número se necessário e tratar strings vazias
+        if (leadData.age !== undefined && leadData.age !== null) {
+          if (typeof leadData.age === 'string') {
+            const ageStr = leadData.age.trim()
+            if (ageStr === '' || ageStr === 'null' || ageStr === 'undefined') {
+              leadData.age = null
+            } else {
+              leadData.age = parseInt(ageStr) || null
+            }
+          }
+        } else {
+          leadData.age = null
+        }
+
+        // Converter score para número se necessário e tratar strings vazias
+        if (leadData.score !== undefined && leadData.score !== null) {
+          if (typeof leadData.score === 'string') {
+            const scoreStr = leadData.score.trim()
+            if (scoreStr === '' || scoreStr === 'null' || scoreStr === 'undefined') {
+              leadData.score = null
+            } else {
+              leadData.score = parseInt(scoreStr) || null
+            }
+          }
+        } else {
+          leadData.score = null
         }
 
         // Verificar se já existe um lead com esse email ou whatsapp

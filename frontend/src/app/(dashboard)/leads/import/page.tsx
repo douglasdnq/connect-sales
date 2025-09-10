@@ -179,7 +179,7 @@ export default function ImportLeadsPage() {
     navigator.clipboard.writeText(text)
   }
 
-  const webhookUrl = "https://racing-lucas.vercel.app/api/import-leads-sheets"
+  const webhookUrl = "https://connect-sales.vercel.app/api/import-leads-sheets"
   const csvTemplate = `Nome,Email,WhatsApp,Idade,Formação,Situação Profissional,Feliz com trabalho,Faixa Salarial,Momento estudar fiscal,Tempo dedicação
 João Silva,joao@exemplo.com,(11) 99999-9999,30,Superior completo,Empregado,Sim,R$ 3.000 - R$ 5.000,Imediatamente,2-3 horas por dia`
 
@@ -493,8 +493,15 @@ João Silva,joao@exemplo.com,(11) 99999-9999,30,Superior completo,Empregado,Sim,
   // Criar objeto com os dados
   const rowData = {};
   headers.forEach((header, index) => {
-    rowData[header] = values[index];
+    if (values[index] !== null && values[index] !== undefined && values[index] !== '') {
+      rowData[header] = values[index];
+    }
   });
+  
+  // Debug: Log dos dados que serão enviados
+  console.log('Headers:', headers);
+  console.log('Values:', values);
+  console.log('Row Data:', rowData);
   
   // Enviar para a API
   const payload = {
@@ -511,9 +518,19 @@ João Silva,joao@exemplo.com,(11) 99999-9999,30,Superior completo,Empregado,Sim,
   
   try {
     const response = UrlFetchApp.fetch('${webhookUrl}', options);
-    console.log('Lead enviado:', response.getContentText());
+    const responseText = response.getContentText();
+    console.log('Response status:', response.getResponseCode());
+    console.log('Lead enviado com sucesso:', responseText);
+    
+    // Parse da resposta para verificar se deu certo
+    const result = JSON.parse(responseText);
+    if (result.success) {
+      console.log('✅ Sucesso! Leads criados:', result.results.created);
+    } else {
+      console.error('❌ Erro na importação:', result.message);
+    }
   } catch (error) {
-    console.error('Erro ao enviar lead:', error);
+    console.error('❌ Erro ao enviar lead:', error.toString());
   }
 }`}</pre>
                   </div>
