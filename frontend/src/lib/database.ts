@@ -149,10 +149,30 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
         return convertedValue
       })(),
       currency: event.payload_json?.Commissions?.currency || 'BRL',
-      customer_name: event.payload_json?.Customer?.full_name || 'N/A',
-      customer_email: event.payload_json?.Customer?.email || 'N/A',
-      product_name: event.payload_json?.Product?.product_name || 'N/A',
-      product_id: event.payload_json?.Product?.product_id || 'N/A',
+      customer_name: (() => {
+        const name = event.payload_json?.Customer?.full_name
+        if (name) return name
+        if (event.import_tag) return 'Cliente Importado'
+        return 'N/A'
+      })(),
+      customer_email: (() => {
+        const email = event.payload_json?.Customer?.email
+        if (email) return email
+        if (event.import_tag) return 'imported@email.com'
+        return 'N/A'
+      })(),
+      product_name: (() => {
+        const product = event.payload_json?.Product?.product_name
+        if (product) return product
+        if (event.import_tag) return 'Produto Importado'
+        return 'N/A'
+      })(),
+      product_id: (() => {
+        const id = event.payload_json?.Product?.product_id
+        if (id) return id
+        if (event.import_tag) return 'imported'
+        return 'N/A'
+      })(),
       platform_name: event.platforms?.name || 'Kiwify',
       webhook_payload: event.payload_json, // Para o modal
       import_tag: event.import_tag, // Tag de importação

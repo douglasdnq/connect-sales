@@ -85,14 +85,14 @@ export async function POST(request: Request) {
           })(),
           
           Product: {
-            product_id: row['id produto'] || 'imported_dmg',
-            product_name: row['nome produto'] || 'Produto Importado DMG',
+            product_id: row['id produto'] || null, // Não usar fallback
+            product_name: row['nome produto'] || null, // Não usar fallback
             offer_name: row['nome oferta'] || null
           },
           
           Customer: {
-            full_name: row['nome contato'] || 'Cliente Importado',
-            email: row['email contato'] || 'imported@email.com',
+            full_name: row['nome contato'] || null, // Não usar fallback, manter null
+            email: row['email contato'] || null, // Não usar fallback, manter null
             cpf: row['doc contato'] || null,
             phone_number: row['telefone contato'] || null,
             address: {
