@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 // Endpoint para importar leads do Google Sheets
 export async function POST(request: NextRequest) {
   try {
-    const { sheetsData } = await request.json()
+    const { sheetsData, customFields = [] } = await request.json()
     
     if (!sheetsData || !Array.isArray(sheetsData)) {
       return NextResponse.json(
@@ -22,24 +22,20 @@ export async function POST(request: NextRequest) {
 
     for (const row of sheetsData) {
       try {
-        // Mapear campos da planilha para campos da tabela leads
+        // Os dados já vem mapeados do frontend, então podemos usar diretamente
         const leadData = {
-          full_name: row['Nome'] || row['nome'] || row['Nome completo'] || null,
-          email: row['Email'] || row['email'] || row['E-mail'] || null,
-          whatsapp: row['WhatsApp'] || row['whatsapp'] || row['Telefone'] || null,
-          age: row['Idade'] || row['idade'] ? parseInt(row['Idade'] || row['idade']) : null,
-          education: row['Formação'] || row['formacao'] || row['Escolaridade'] || null,
-          work_situation: row['Situação Profissional'] || row['situacao_profissional'] || null,
-          happy_with_work: row['Feliz com trabalho'] || row['feliz_trabalho'] || null,
-          salary_range: row['Faixa Salarial'] || row['salario'] || null,
-          fiscal_study_moment: row['Momento estudar fiscal'] || row['momento_estudo'] || null,
-          study_time_dedication: row['Tempo dedicação'] || row['tempo_dedicacao'] || null,
-          utm_source: row['UTM Source'] || row['utm_source'] || 'google-sheets',
-          utm_medium: row['UTM Medium'] || row['utm_medium'] || 'import',
-          utm_campaign: row['UTM Campaign'] || row['utm_campaign'] || null,
-          lead_source: 'google-sheets',
-          status: 'new' as const,
-          form_date: row['Data'] || row['data'] || new Date().toISOString(),
+          ...row, // Incluir todos os campos mapeados
+          lead_source: row.lead_source || 'google-sheets',
+          status: row.status || 'new',
+          form_date: row.form_date || new Date().toISOString(),
+          // Não sobrescrever UTM se já existe no row
+          utm_source: row.utm_source || null,
+          utm_medium: row.utm_medium || null,
+        }
+
+        // Converter idade para número se necessário
+        if (leadData.age && typeof leadData.age === 'string') {
+          leadData.age = parseInt(leadData.age) || null
         }
 
         // Verificar se já existe um lead com esse email ou whatsapp

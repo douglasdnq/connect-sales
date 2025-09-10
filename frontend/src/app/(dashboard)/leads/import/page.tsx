@@ -1,25 +1,56 @@
 'use client'
 
 import { useState } from 'react'
-import { FileSpreadsheet, Upload, CheckCircle, AlertCircle, ArrowLeft, Copy, ExternalLink } from 'lucide-react'
+import { FileSpreadsheet, Upload, CheckCircle, AlertCircle, ArrowLeft, Copy, ExternalLink, Settings, Plus, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function ImportLeadsPage() {
   const [importing, setImporting] = useState(false)
   const [importResult, setImportResult] = useState<any>(null)
+  const [showMapping, setShowMapping] = useState(false)
+  const [csvData, setCsvData] = useState<any[]>([])
+  const [csvHeaders, setCsvHeaders] = useState<string[]>([])
+  const [fieldMapping, setFieldMapping] = useState<{[key: string]: string}>({})
+  const [customFields, setCustomFields] = useState<{name: string, type: string}[]>([])
+
+  // Campos disponíveis na tabela leads com nomes do Respondi
+  const availableFields = [
+    { key: 'full_name', label: 'Qual seu nome completo?', type: 'text', alternativeLabels: ['Nome Completo', 'Nome', 'nome'] },
+    { key: 'whatsapp', label: 'Qual seu WhatsApp?', type: 'text', alternativeLabels: ['WhatsApp', 'Telefone', 'whatsapp'] },
+    { key: 'email', label: 'Qual o seu e-mail?', type: 'email', alternativeLabels: ['Email', 'E-mail', 'email'] },
+    { key: 'age', label: 'E a sua idade?', type: 'number', alternativeLabels: ['Idade', 'idade'] },
+    { key: 'education', label: 'Em que você é formado(a)?', type: 'text', alternativeLabels: ['Formação', 'Escolaridade', 'formacao'] },
+    { key: 'work_situation', label: 'Qual é a opção que melhor descreve sua situação profissional?', type: 'text', alternativeLabels: ['Situação Profissional', 'Situação Trabalho'] },
+    { key: 'happy_with_work', label: 'Você é feliz com o seu trabalho atual?', type: 'text', alternativeLabels: ['Feliz com trabalho'] },
+    { key: 'salary_range', label: 'Qual é a sua faixa de salário atual?', type: 'text', alternativeLabels: ['Faixa Salarial', 'Salário'] },
+    { key: 'fiscal_study_moment', label: 'Qual é o seu momento em relação aos estudos para Área Fiscal?', type: 'text', alternativeLabels: ['Momento estudar fiscal'] },
+    { key: 'study_time_dedication', label: 'Quanto tempo você pode dedicar aos estudos para se tornar Auditor-Fiscal?', type: 'text', alternativeLabels: ['Tempo dedicação'] },
+    { key: 'why_mentoria_ideal', label: 'Por que você acredita que a Mentoria Tributum é ideal para você agora?', type: 'text', alternativeLabels: ['Por que mentoria é ideal'] },
+    { key: 'why_deserve_spot', label: 'Se houvesse apenas 1 vaga na mentoria hoje, por que ela deveria ser sua?', type: 'text', alternativeLabels: ['Por que merece vaga'] },
+    { key: 'investment_type', label: 'A Mentoria é um programa de alto impacto para acelerar sua aprovação. O investimento atual é de:', type: 'text', alternativeLabels: ['Investimento', 'Tipo de investimento'] },
+    { key: 'priority_start', label: 'É uma prioridade para você iniciar sua preparação imediatamente?', type: 'text', alternativeLabels: ['Prioridade de início'] },
+    { key: 'score', label: 'Pontuação', type: 'number', alternativeLabels: ['Score', 'Pontos'] },
+    { key: 'form_date', label: 'Data', type: 'datetime', alternativeLabels: ['Data do Formulário', 'data'] },
+    { key: 'id', label: 'ID', type: 'text', alternativeLabels: [] },
+    { key: 'utm_source', label: 'utm_source', type: 'text', alternativeLabels: ['UTM Source'] },
+    { key: 'utm_medium', label: 'utm_medium', type: 'text', alternativeLabels: ['UTM Medium'] },
+    { key: 'utm_campaign', label: 'utm_campaign', type: 'text', alternativeLabels: ['UTM Campaign'] },
+    { key: 'utm_term', label: 'utm_term', type: 'text', alternativeLabels: ['UTM Term'] },
+    { key: 'utm_content', label: 'utm_content', type: 'text', alternativeLabels: ['UTM Content'] },
+    { key: 'gclid', label: 'gclid', type: 'text', alternativeLabels: ['Google Click ID'] },
+    { key: 'fbclid', label: 'fbclid', type: 'text', alternativeLabels: ['Facebook Click ID'] },
+  ]
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file) return
 
-    try {
-      setImporting(true)
-      
+    try {      
       const text = await file.text()
       const lines = text.split('\n')
       const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''))
       
-      const sheetsData = lines.slice(1)
+      const data = lines.slice(1)
         .filter(line => line.trim())
         .map(line => {
           const values = line.split(',').map(v => v.trim().replace(/"/g, ''))
@@ -30,21 +61,114 @@ export default function ImportLeadsPage() {
           return row
         })
 
+      setCsvHeaders(headers)
+      setCsvData(data)
+      
+      // Auto-mapear campos conhecidos usando labels principais e alternativos
+      const autoMapping: {[key: string]: string} = {}
+      headers.forEach(header => {
+        const normalizedHeader = header.toLowerCase().trim()
+        
+        const field = availableFields.find(f => {
+          // Correspondência exata com label principal
+          if (f.label.toLowerCase() === normalizedHeader) return true
+          
+          // Correspondência com labels alternativos
+          if (f.alternativeLabels.some(alt => alt.toLowerCase() === normalizedHeader)) return true
+          
+          // Correspondência exata com key
+          if (f.key.toLowerCase() === normalizedHeader) return true
+          
+          // Correspondência parcial para casos especiais
+          if (f.key === 'full_name' && (normalizedHeader.includes('nome') || normalizedHeader.includes('name'))) return true
+          if (f.key === 'email' && normalizedHeader.includes('email')) return true
+          if (f.key === 'whatsapp' && (normalizedHeader.includes('whatsapp') || normalizedHeader.includes('telefone'))) return true
+          if (f.key === 'age' && (normalizedHeader.includes('idade') || normalizedHeader.includes('age'))) return true
+          if (f.key === 'utm_source' && normalizedHeader === 'utm_source') return true
+          if (f.key === 'utm_medium' && normalizedHeader === 'utm_medium') return true
+          if (f.key === 'utm_campaign' && normalizedHeader === 'utm_campaign') return true
+          if (f.key === 'utm_term' && normalizedHeader === 'utm_term') return true
+          if (f.key === 'utm_content' && normalizedHeader === 'utm_content') return true
+          if (f.key === 'gclid' && normalizedHeader === 'gclid') return true
+          if (f.key === 'fbclid' && normalizedHeader === 'fbclid') return true
+          
+          return false
+        })
+        
+        if (field) {
+          autoMapping[header] = field.key
+        }
+      })
+      setFieldMapping(autoMapping)
+      setShowMapping(true)
+      
+    } catch (error) {
+      console.error('Erro ao processar arquivo:', error)
+      setImportResult({
+        success: false,
+        message: 'Erro ao processar arquivo'
+      })
+    }
+  }
+
+  const addCustomField = () => {
+    setCustomFields([...customFields, { name: '', type: 'text' }])
+  }
+
+  const removeCustomField = (index: number) => {
+    setCustomFields(customFields.filter((_, i) => i !== index))
+  }
+
+  const updateCustomField = (index: number, field: string, value: string) => {
+    const updated = [...customFields]
+    updated[index] = { ...updated[index], [field]: value }
+    setCustomFields(updated)
+  }
+
+  const processImport = async () => {
+    try {
+      setImporting(true)
+
+      // Criar dados mapeados
+      const mappedData = csvData.map(row => {
+        const mappedRow: any = {}
+        
+        // Mapear campos existentes
+        Object.entries(fieldMapping).forEach(([csvField, dbField]) => {
+          if (dbField && row[csvField] !== undefined) {
+            mappedRow[dbField] = row[csvField]
+          }
+        })
+
+        // Adicionar campos personalizados
+        customFields.forEach(field => {
+          if (field.name && row[field.name] !== undefined) {
+            mappedRow[field.name] = row[field.name]
+          }
+        })
+
+        return mappedRow
+      })
+
       const response = await fetch('/api/import-leads-sheets', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ sheetsData }),
+        body: JSON.stringify({ 
+          sheetsData: mappedData,
+          customFields: customFields.filter(f => f.name)
+        }),
       })
 
       const result = await response.json()
       setImportResult(result)
+      setShowMapping(false)
     } catch (error) {
       console.error('Erro na importação:', error)
       setImportResult({
         success: false,
-        message: 'Erro ao processar arquivo'
+        message: 'Erro ao processar importação'
       })
     } finally {
       setImporting(false)
@@ -149,6 +273,167 @@ João Silva,joao@exemplo.com,(11) 99999-9999,30,Superior completo,Empregado,Sim,
           </div>
         </div>
       </div>
+
+      {/* Modal de Mapeamento de Campos */}
+      {showMapping && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full max-h-screen overflow-y-auto m-4">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">
+                Mapear Campos do CSV
+              </h3>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowMapping(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={processImport}
+                  disabled={importing}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {importing ? 'Importando...' : 'Confirmar Importação'}
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-6">
+                <p className="text-gray-600 mb-2">
+                  Foram detectados <strong>{csvHeaders.length}</strong> campos no seu CSV.
+                  Mapeie os campos do CSV para os campos da tabela de leads:
+                </p>
+                <div className="text-sm text-blue-600">
+                  {csvData.length} registros serão importados
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-medium text-gray-900">Mapeamento de Campos</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {csvHeaders.map((header, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Campo CSV: <strong>{header}</strong>
+                      </label>
+                      <div className="text-xs text-gray-500 mb-2">
+                        Exemplo: {csvData[0]?.[header] || 'N/A'}
+                      </div>
+                      <select
+                        value={fieldMapping[header] || ''}
+                        onChange={(e) => setFieldMapping({
+                          ...fieldMapping,
+                          [header]: e.target.value
+                        })}
+                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="">Não mapear</option>
+                        {availableFields.map(field => (
+                          <option key={field.key} value={field.key}>
+                            {field.label} ({field.type})
+                          </option>
+                        ))}
+                        <optgroup label="Campos Personalizados">
+                          {customFields.map((field, idx) => (
+                            field.name && (
+                              <option key={`custom-${idx}`} value={field.name}>
+                                {field.name} (personalizado)
+                              </option>
+                            )
+                          ))}
+                        </optgroup>
+                      </select>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="border-t pt-6">
+                  <div className="mb-4">
+                    <h4 className="font-medium text-gray-900 mb-2">Campos Não Mapeados</h4>
+                    <p className="text-sm text-gray-600">
+                      Os campos abaixo não foram mapeados para nenhum campo da tabela de leads. 
+                      Você pode criar campos personalizados para armazená-los.
+                    </p>
+                  </div>
+
+                  {/* Mostrar campos não mapeados */}
+                  {csvHeaders.filter(header => !fieldMapping[header]).length > 0 && (
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                      <h5 className="font-medium text-yellow-800 mb-2">
+                        Campos não mapeados ({csvHeaders.filter(header => !fieldMapping[header]).length})
+                      </h5>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {csvHeaders.filter(header => !fieldMapping[header]).map(header => (
+                          <div key={header} className="flex items-center justify-between bg-white p-2 rounded border">
+                            <div>
+                              <div className="text-sm font-medium">{header}</div>
+                              <div className="text-xs text-gray-500">Ex: {csvData[0]?.[header]}</div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                const newField = { name: header, type: 'text' }
+                                setCustomFields([...customFields, newField])
+                                setFieldMapping({ ...fieldMapping, [header]: header })
+                              }}
+                              className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700"
+                            >
+                              Criar Campo
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Campos personalizados criados */}
+                  {customFields.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <h5 className="font-medium text-blue-800 mb-3">
+                        Campos Personalizados Criados ({customFields.length})
+                      </h5>
+                      <div className="space-y-2">
+                        {customFields.map((field, index) => (
+                          <div key={index} className="flex items-center justify-between bg-white p-3 rounded border">
+                            <div className="flex-1">
+                              <div className="font-medium">{field.name}</div>
+                              <div className="text-sm text-gray-600">Tipo: {field.type}</div>
+                            </div>
+                            <button
+                              onClick={() => {
+                                // Remove do mapeamento
+                                const newMapping = { ...fieldMapping }
+                                delete newMapping[field.name]
+                                setFieldMapping(newMapping)
+                                // Remove do array de campos personalizados
+                                removeCustomField(index)
+                              }}
+                              className="text-red-600 hover:text-red-900 text-sm"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h5 className="font-medium text-blue-900 mb-2">Resumo do Mapeamento</h5>
+                  <div className="text-sm space-y-1">
+                    <div>Campos mapeados: <strong>{Object.keys(fieldMapping).filter(k => fieldMapping[k]).length}</strong></div>
+                    <div>Campos ignorados: <strong>{csvHeaders.length - Object.keys(fieldMapping).filter(k => fieldMapping[k]).length}</strong></div>
+                    <div>Campos personalizados: <strong>{customFields.filter(f => f.name).length}</strong></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Método 2: Google Apps Script */}
       <div className="bg-white rounded-lg shadow border p-6">

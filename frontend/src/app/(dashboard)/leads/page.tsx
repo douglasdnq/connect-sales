@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { supabase } from '@/lib/supabase'
 import type { Lead } from '@/lib/supabase'
-import { User, Phone, Mail, Calendar, Target, TrendingUp, Download, Upload, Filter, Search, Eye, Edit, Trash2 } from 'lucide-react'
+import { User, Phone, Mail, Calendar, Target, TrendingUp, Download, Upload, Filter, Search, Eye, Edit, Trash2, X } from 'lucide-react'
 
 export default function LeadsPage() {
   const [leads, setLeads] = useState<Lead[]>([])
@@ -12,6 +12,10 @@ export default function LeadsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
+  const [selectedLeads, setSelectedLeads] = useState<Set<string>>(new Set())
+  const [showLeadModal, setShowLeadModal] = useState(false)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [bulkDeleting, setBulkDeleting] = useState(false)
   const [stats, setStats] = useState({
     total: 0,
     new: 0,
@@ -160,8 +164,59 @@ export default function LeadsPage() {
     })
   }
 
+  const toggleLeadSelection = (leadId: string) => {
+    const newSelected = new Set(selectedLeads)
+    if (newSelected.has(leadId)) {
+      newSelected.delete(leadId)
+    } else {
+      newSelected.add(leadId)
+    }
+    setSelectedLeads(newSelected)
+  }
+
+  const toggleSelectAll = () => {
+    if (selectedLeads.size === filteredLeads.length) {
+      setSelectedLeads(new Set())
+    } else {
+      setSelectedLeads(new Set(filteredLeads.map(lead => lead.id)))
+    }
+  }
+
+  const bulkDeleteLeads = async () => {
+    if (selectedLeads.size === 0) return
+    
+    if (!confirm(`Tem certeza que deseja excluir ${selectedLeads.size} leads selecionados?`)) {
+      return
+    }
+
+    try {
+      setBulkDeleting(true)
+      
+      const { error } = await supabase
+        .from('leads')
+        .delete()
+        .in('id', Array.from(selectedLeads))
+
+      if (error) throw error
+
+      setLeads(prev => prev.filter(lead => !selectedLeads.has(lead.id)))
+      setSelectedLeads(new Set())
+      fetchStats()
+    } catch (error) {
+      console.error('Erro ao excluir leads:', error)
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  const viewLead = (lead: Lead) => {
+    console.log('Lead data:', lead) // Debug: ver dados do lead
+    setSelectedLead(lead)
+    setShowLeadModal(true)
+  }
+
   const exportToCSV = () => {
-    const headers = ['Nome', 'Email', 'WhatsApp', 'Idade', 'Formação', 'Situação Profissional', 'Status', 'Fonte', 'Data Criação']
+    const headers = ['Nome', 'Email', 'WhatsApp', 'Idade', 'Formação', 'Situação Profissional', 'Status', 'Fonte', 'UTM Source', 'UTM Medium', 'UTM Campaign', 'Data Criação']
     
     const csvData = [
       headers,
@@ -174,6 +229,9 @@ export default function LeadsPage() {
         lead.work_situation || '',
         getStatusLabel(lead.status),
         lead.lead_source,
+        lead.utm_source || '',
+        lead.utm_medium || '',
+        lead.utm_campaign || '',
         formatDate(lead.created_at)
       ])
     ]
@@ -233,6 +291,33 @@ export default function LeadsPage() {
           </button>
         </div>
       </div>
+
+      {/* Barra de ações em lote */}
+      {selectedLeads.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="text-blue-800 font-medium">
+              {selectedLeads.size} lead(s) selecionado(s)
+            </span>
+            <button
+              onClick={() => setSelectedLeads(new Set())}
+              className="text-blue-600 hover:text-blue-800 text-sm"
+            >
+              Limpar seleção
+            </button>
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={bulkDeleteLeads}
+              disabled={bulkDeleting}
+              className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Trash2 className="w-4 h-4" />
+              {bulkDeleting ? 'Excluindo...' : 'Excluir Selecionados'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
@@ -358,6 +443,14 @@ export default function LeadsPage() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <input
+                    type="checkbox"
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    checked={selectedLeads.size === filteredLeads.length && filteredLeads.length > 0}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Lead
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -370,6 +463,9 @@ export default function LeadsPage() {
                   Fonte
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  UTM
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Data
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -379,7 +475,15 @@ export default function LeadsPage() {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredLeads.map((lead) => (
-                <tr key={lead.id} className="hover:bg-gray-50">
+                <tr key={lead.id} className={`hover:bg-gray-50 ${selectedLeads.has(lead.id) ? 'bg-blue-50' : ''}`}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      checked={selectedLeads.has(lead.id)}
+                      onChange={() => toggleLeadSelection(lead.id)}
+                    />
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div>
                       <div className="text-sm font-medium text-gray-900">
@@ -424,19 +528,54 @@ export default function LeadsPage() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {lead.lead_source}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-xs space-y-1">
+                      {lead.utm_source && (
+                        <div className="flex items-center">
+                          <span className="text-gray-500 w-12">Src:</span>
+                          <span className="text-gray-900">{lead.utm_source}</span>
+                        </div>
+                      )}
+                      {lead.utm_medium && (
+                        <div className="flex items-center">
+                          <span className="text-gray-500 w-12">Med:</span>
+                          <span className="text-gray-900">{lead.utm_medium}</span>
+                        </div>
+                      )}
+                      {lead.utm_campaign && (
+                        <div className="flex items-center">
+                          <span className="text-gray-500 w-12">Cam:</span>
+                          <span className="text-gray-900 truncate max-w-24" title={lead.utm_campaign}>
+                            {lead.utm_campaign}
+                          </span>
+                        </div>
+                      )}
+                      {!lead.utm_source && !lead.utm_medium && !lead.utm_campaign && (
+                        <span className="text-gray-400">N/A</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {formatDate(lead.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button className="text-blue-600 hover:text-blue-900">
+                    <button 
+                      onClick={() => viewLead(lead)}
+                      className="text-blue-600 hover:text-blue-900"
+                      title="Visualizar detalhes"
+                    >
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button className="text-gray-600 hover:text-gray-900">
+                    <button 
+                      className="text-gray-600 hover:text-gray-900"
+                      title="Editar lead"
+                    >
                       <Edit className="w-4 h-4" />
                     </button>
                     <button 
                       onClick={() => deleteLead(lead.id)}
                       className="text-red-600 hover:text-red-900"
+                      title="Excluir lead"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -459,6 +598,177 @@ export default function LeadsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de visualização de detalhes */}
+      {showLeadModal && selectedLead && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-96 overflow-y-auto m-4">
+            <div className="sticky top-0 bg-white border-b px-6 py-4 flex items-center justify-between">
+              <h3 className="text-lg font-medium text-gray-900">
+                Detalhes do Lead
+              </h3>
+              <button
+                onClick={() => setShowLeadModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Informações pessoais */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">Informações Pessoais</h4>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">ID</label>
+                    <p className="text-xs text-gray-600 font-mono">{selectedLead.id}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Nome Completo</label>
+                    <p className="text-sm text-gray-900">{selectedLead.full_name || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Email</label>
+                    <p className="text-sm text-gray-900">{selectedLead.email || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">WhatsApp</label>
+                    <p className="text-sm text-gray-900">{selectedLead.whatsapp || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Idade</label>
+                    <p className="text-sm text-gray-900">{selectedLead.age || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Formação</label>
+                    <p className="text-sm text-gray-900">{selectedLead.education || 'Não informado'}</p>
+                  </div>
+                </div>
+
+                {/* Informações profissionais */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">Informações Profissionais</h4>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Situação Profissional</label>
+                    <p className="text-sm text-gray-900">{selectedLead.work_situation || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Feliz com trabalho</label>
+                    <p className="text-sm text-gray-900">{selectedLead.happy_with_work || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Faixa Salarial</label>
+                    <p className="text-sm text-gray-900">{selectedLead.salary_range || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Momento para estudar fiscal</label>
+                    <p className="text-sm text-gray-900">{selectedLead.fiscal_study_moment || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Tempo de dedicação</label>
+                    <p className="text-sm text-gray-900">{selectedLead.study_time_dedication || 'Não informado'}</p>
+                  </div>
+                </div>
+
+                {/* Informações de origem */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">Informações de Origem</h4>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Fonte</label>
+                    <p className="text-sm text-gray-900">{selectedLead.lead_source}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">UTM Source</label>
+                    <p className="text-sm text-gray-900">{selectedLead.utm_source || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">UTM Medium</label>
+                    <p className="text-sm text-gray-900">{selectedLead.utm_medium || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">UTM Campaign</label>
+                    <p className="text-sm text-gray-900">{selectedLead.utm_campaign || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">UTM Term</label>
+                    <p className="text-sm text-gray-900">{selectedLead.utm_term || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">UTM Content</label>
+                    <p className="text-sm text-gray-900">{selectedLead.utm_content || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Google Click ID (GCLID)</label>
+                    <p className="text-sm text-gray-900">{selectedLead.gclid || 'Não informado'}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Facebook Click ID (FBCLID)</label>
+                    <p className="text-sm text-gray-900">{selectedLead.fbclid || 'Não informado'}</p>
+                  </div>
+                </div>
+
+                {/* Status e datas */}
+                <div className="space-y-4">
+                  <h4 className="font-medium text-gray-900">Status e Datas</h4>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Status Atual</label>
+                    <span className={`inline-flex px-2 py-1 text-xs rounded-full ${getStatusColor(selectedLead.status)}`}>
+                      {getStatusLabel(selectedLead.status)}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Data do Formulário</label>
+                    <p className="text-sm text-gray-900">
+                      {selectedLead.form_date ? formatDate(selectedLead.form_date) : 'Não informado'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Criado em</label>
+                    <p className="text-sm text-gray-900">{formatDate(selectedLead.created_at)}</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Atualizado em</label>
+                    <p className="text-sm text-gray-900">{formatDate(selectedLead.updated_at)}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-50 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setShowLeadModal(false)}
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+              >
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

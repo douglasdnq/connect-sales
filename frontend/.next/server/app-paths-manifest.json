@@ -1,20 +1,20 @@
 {
   "/_not-found/page": "app/_not-found/page.js",
-  "/api/fix-rls/route": "app/api/fix-rls/route.js",
-  "/api/import-leads-sheets/route": "app/api/import-leads-sheets/route.js",
   "/api/bulk-delete/route": "app/api/bulk-delete/route.js",
+  "/api/fix-rls/route": "app/api/fix-rls/route.js",
   "/api/leads/route": "app/api/leads/route.js",
+  "/api/import-leads-sheets/route": "app/api/import-leads-sheets/route.js",
   "/api/migrate/route": "app/api/migrate/route.js",
   "/api/import-csv/route": "app/api/import-csv/route.js",
   "/auth/login/page": "app/auth/login/page.js",
   "/page": "app/page.js",
-  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
-  "/(dashboard)/events/page": "app/(dashboard)/events/page.js",
   "/(dashboard)/customers/page": "app/(dashboard)/customers/page.js",
   "/(dashboard)/errors/page": "app/(dashboard)/errors/page.js",
-  "/(dashboard)/goals/page": "app/(dashboard)/goals/page.js",
-  "/(dashboard)/orders/page": "app/(dashboard)/orders/page.js",
-  "/(dashboard)/leads/page": "app/(dashboard)/leads/page.js",
+  "/(dashboard)/events/page": "app/(dashboard)/events/page.js",
   "/(dashboard)/leads/import/page": "app/(dashboard)/leads/import/page.js",
-  "/(dashboard)/settings/page": "app/(dashboard)/settings/page.js"
+  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
+  "/(dashboard)/orders/page": "app/(dashboard)/orders/page.js",
+  "/(dashboard)/goals/page": "app/(dashboard)/goals/page.js",
+  "/(dashboard)/settings/page": "app/(dashboard)/settings/page.js",
+  "/(dashboard)/leads/page": "app/(dashboard)/leads/page.js"
 }
