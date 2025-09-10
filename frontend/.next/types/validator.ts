@@ -77,6 +77,18 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   handler satisfies AppPageConfig<"/goals">
 }
 
+// Validate ../../src/app/(dashboard)/leads/import/page.tsx
+{
+  const handler = {} as typeof import("../../src/app/(dashboard)/leads/import/page.js")
+  handler satisfies AppPageConfig<"/leads/import">
+}
+
+// Validate ../../src/app/(dashboard)/leads/page.tsx
+{
+  const handler = {} as typeof import("../../src/app/(dashboard)/leads/page.js")
+  handler satisfies AppPageConfig<"/leads">
+}
+
 // Validate ../../src/app/(dashboard)/orders/page.tsx
 {
   const handler = {} as typeof import("../../src/app/(dashboard)/orders/page.js")
@@ -117,6 +129,12 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
 {
   const handler = {} as typeof import("../../src/app/api/import-csv/route.js")
   handler satisfies RouteHandlerConfig<"/api/import-csv">
+}
+
+// Validate ../../src/app/api/import-leads-sheets/route.ts
+{
+  const handler = {} as typeof import("../../src/app/api/import-leads-sheets/route.js")
+  handler satisfies RouteHandlerConfig<"/api/import-leads-sheets">
 }
 
 // Validate ../../src/app/api/leads/route.ts

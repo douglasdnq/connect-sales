@@ -1,17 +1,20 @@
 {
-  "/api/fix-rls/route": "/api/fix-rls",
-  "/api/bulk-delete/route": "/api/bulk-delete",
   "/_not-found/page": "/_not-found",
+  "/api/fix-rls/route": "/api/fix-rls",
+  "/api/import-leads-sheets/route": "/api/import-leads-sheets",
+  "/api/bulk-delete/route": "/api/bulk-delete",
   "/api/leads/route": "/api/leads",
   "/api/migrate/route": "/api/migrate",
   "/api/import-csv/route": "/api/import-csv",
   "/auth/login/page": "/auth/login",
   "/page": "/",
-  "/(dashboard)/customers/page": "/customers",
-  "/(dashboard)/goals/page": "/goals",
   "/(dashboard)/dashboard/page": "/dashboard",
-  "/(dashboard)/orders/page": "/orders",
-  "/(dashboard)/settings/page": "/settings",
   "/(dashboard)/events/page": "/events",
-  "/(dashboard)/errors/page": "/errors"
+  "/(dashboard)/customers/page": "/customers",
+  "/(dashboard)/errors/page": "/errors",
+  "/(dashboard)/goals/page": "/goals",
+  "/(dashboard)/orders/page": "/orders",
+  "/(dashboard)/leads/page": "/leads",
+  "/(dashboard)/leads/import/page": "/leads/import",
+  "/(dashboard)/settings/page": "/settings"
 }

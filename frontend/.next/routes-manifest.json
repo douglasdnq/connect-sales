@@ -69,6 +69,18 @@
       "namedRegex": "^/goals(?:/)?$"
     },
     {
+      "page": "/leads",
+      "regex": "^/leads(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/leads(?:/)?$"
+    },
+    {
+      "page": "/leads/import",
+      "regex": "^/leads/import(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/leads/import(?:/)?$"
+    },
+    {
       "page": "/orders",
       "regex": "^/orders(?:/)?$",
       "routeKeys": {},

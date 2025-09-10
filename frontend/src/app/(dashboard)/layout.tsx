@@ -13,7 +13,8 @@ import {
   Menu,
   X,
   LogOut,
-  Target
+  Target,
+  UserPlus
 } from 'lucide-react'
 import { AuthGuard } from '@/components/auth-guard'
 import { useAuth } from '@/components/auth-provider'
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Pedidos', href: '/orders', icon: ShoppingBag },
   { name: 'Clientes', href: '/customers', icon: Users },
+  { name: 'Leads', href: '/leads', icon: UserPlus },
   { name: 'Metas', href: '/goals', icon: Target },
   { name: 'Eventos', href: '/events', icon: Calendar },
   { name: 'Erros', href: '/errors', icon: AlertCircle },
