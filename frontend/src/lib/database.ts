@@ -44,6 +44,63 @@ export async function getDashboardStats() {
   }
 }
 
+// Buscar faturamento mensal de pedidos reais
+export async function getMonthlyRevenue(year: number) {
+  try {
+    const { data: rawEvents, error } = await supabase
+      .from('raw_events')
+      .select(`
+        id,
+        event_type,
+        payload_json,
+        received_at,
+        platforms(name)
+      `)
+      .gte('received_at', `${year}-01-01`)
+      .lt('received_at', `${year + 1}-01-01`)
+      .order('received_at', { ascending: false })
+
+    if (error) {
+      console.error('Erro ao buscar eventos:', error)
+      return Array.from({ length: 12 }, (_, i) => ({ month: i + 1, revenue: 0 }))
+    }
+
+    // Processar eventos e extrair faturamento por mês
+    const monthlyData = Array.from({ length: 12 }, (_, i) => ({ month: i + 1, revenue: 0 }))
+
+    rawEvents?.forEach(event => {
+      try {
+        const payload = event.payload_json
+        const eventDate = new Date(event.received_at)
+        const month = eventDate.getMonth() + 1 // getMonth() retorna 0-11
+        
+        let revenue = 0
+
+        if (event.event_type === 'order.paid' || event.event_type === 'order.completed') {
+          // Extrair valor baseado na plataforma
+          const platformName = (event.platforms as any)?.name || null
+          if (platformName === 'Kiwify') {
+            revenue = payload?.order_value || payload?.gross_amount || 0
+          } else if (platformName === 'Digital Manager Guru') {
+            revenue = parseFloat(payload?.valor_liquido || payload?.net_amount || '0')
+          }
+        }
+
+        if (revenue > 0 && month >= 1 && month <= 12) {
+          monthlyData[month - 1].revenue += revenue
+        }
+      } catch (err) {
+        console.error('Erro ao processar evento:', err)
+      }
+    })
+
+    return monthlyData
+  } catch (error) {
+    console.error('Erro na função getMonthlyRevenue:', error)
+    return Array.from({ length: 12 }, (_, i) => ({ month: i + 1, revenue: 0 }))
+  }
+}
+
 // Orders - agora buscando diretamente dos webhooks da Kiwify
 export async function getOrders(limit?: number, startDate?: string, endDate?: string, dataSource?: 'all' | 'webhook' | 'imported') {
   let query = supabase

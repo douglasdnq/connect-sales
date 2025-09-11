@@ -16,7 +16,7 @@ import {
   ArrowUpRight,
   Clock
 } from 'lucide-react'
-import { getGoalProgress, getAscensions } from '@/lib/database'
+import { getGoalProgress, getAscensions, getMonthlyRevenue } from '@/lib/database'
 import type { Goal } from '@/lib/supabase'
 
 interface DashboardData {
@@ -82,28 +82,8 @@ export default function Dashboard() {
 
         // Buscar dados de todos os meses do ano para o gráfico anual
         // Usar getOrders para buscar faturamento real de cada mês, independente de metas
-        const monthlyData = []
-        for (let month = 1; month <= 12; month++) {
-          try {
-            // Calcular período do mês
-            const startDate = `${selectedYear}-${month.toString().padStart(2, '0')}-01`
-            const lastDay = new Date(selectedYear, month, 0).getDate()
-            const endDate = `${selectedYear}-${month.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
-            
-            // Por enquanto, usar dados das metas existentes
-            // Isso será melhorado quando criarmos a API de monthly-revenue
-            const { data: monthData } = await getGoalProgress(month, selectedYear)
-            const monthRevenue = monthData?.current.global_revenue || 0
-            
-            monthlyData.push({
-              month,
-              revenue: monthRevenue
-            })
-          } catch (error) {
-            console.error(`Erro ao buscar dados do mês ${month}:`, error)
-            monthlyData.push({ month, revenue: 0 })
-          }
-        }
+        // Buscar dados reais de faturamento mensal
+        const monthlyData = await getMonthlyRevenue(selectedYear)
 
         const dashboardData: DashboardData = {
           dzaSales: (goalData?.current.dza_sales || 0) + (goalData?.current.mentoria_sales || 0), // Vendas totais (DZA + Mentoria)
