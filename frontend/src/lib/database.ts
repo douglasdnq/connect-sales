@@ -45,7 +45,7 @@ export async function getDashboardStats() {
 }
 
 // Orders - agora buscando diretamente dos webhooks da Kiwify
-export async function getOrders(limit?: number, startDate?: string, endDate?: string) {
+export async function getOrders(limit?: number, startDate?: string, endDate?: string, dataSource?: 'all' | 'webhook' | 'imported') {
   let query = supabase
     .from('raw_events')
     .select(`
@@ -56,6 +56,14 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
       import_tag,
       platforms(name)
     `)
+
+  // Filtrar por fonte de dados
+  if (dataSource === 'webhook') {
+    query = query.is('import_tag', null)
+  } else if (dataSource === 'imported') {
+    query = query.not('import_tag', 'is', null)
+  }
+  // Se dataSource === 'all' ou não especificado, mostra tudo
 
   // Aplicar filtro de data início se fornecido (ajustar para horário Brasil UTC-3)
   if (startDate) {

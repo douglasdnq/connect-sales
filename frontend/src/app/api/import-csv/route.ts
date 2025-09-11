@@ -5,6 +5,69 @@ interface CSVRow {
   [key: string]: string
 }
 
+interface ValidationResult {
+  isValid: boolean
+  error?: string
+  missingFields?: string[]
+  expectedFields?: string[]
+}
+
+// Função para validar se o CSV é compatível com a plataforma
+function validateCSVHeaders(headers: string[], platform: string): ValidationResult {
+  const normalizedHeaders = headers.map(h => h.toLowerCase().trim())
+
+  if (platform === 'dmg') {
+    const requiredDMGFields = [
+      'id transação',
+      'data pedido', 
+      'status',
+      'nome produto',
+      'nome contato',
+      'email contato',
+      'valor liquido'
+    ]
+    
+    const missingFields = requiredDMGFields.filter(field => 
+      !normalizedHeaders.some(header => header.includes(field.toLowerCase()))
+    )
+
+    if (missingFields.length > 0) {
+      return {
+        isValid: false,
+        error: `Arquivo CSV não é compatível com Digital Manager Guru. Campos obrigatórios ausentes: ${missingFields.join(', ')}`,
+        missingFields,
+        expectedFields: requiredDMGFields
+      }
+    }
+
+  } else if (platform === 'kiwify') {
+    const requiredKiwifyFields = [
+      'ID da venda',
+      'Data de Criação',
+      'Status',
+      'Produto',
+      'Cliente', 
+      'Email',
+      'Valor líquido'
+    ]
+    
+    const missingFields = requiredKiwifyFields.filter(field => 
+      !normalizedHeaders.some(header => header.includes(field.toLowerCase()))
+    )
+
+    if (missingFields.length > 0) {
+      return {
+        isValid: false,
+        error: `Arquivo CSV não é compatível com Kiwify. Campos obrigatórios ausentes: ${missingFields.join(', ')}`,
+        missingFields,
+        expectedFields: requiredKiwifyFields
+      }
+    }
+  }
+
+  return { isValid: true }
+}
+
 export async function POST(request: Request) {
   try {
     const formData = await request.formData()
@@ -33,6 +96,20 @@ export async function POST(request: Request) {
     // Parse do cabeçalho
     const headers = parseCSVLine(csvLines[0])
     console.log('Headers encontrados:', headers)
+
+    // Validar se o arquivo é compatível com a plataforma selecionada
+    const validationResult = validateCSVHeaders(headers, platform)
+    if (!validationResult.isValid) {
+      return NextResponse.json({ 
+        error: validationResult.error,
+        details: {
+          platform: platform,
+          missingFields: validationResult.missingFields,
+          foundHeaders: headers.slice(0, 10), // Mostrar apenas os primeiros 10 para não poluir
+          expectedFields: validationResult.expectedFields
+        }
+      }, { status: 400 })
+    }
 
     // Parse das linhas de dados
     for (let i = 1; i < csvLines.length; i++) {

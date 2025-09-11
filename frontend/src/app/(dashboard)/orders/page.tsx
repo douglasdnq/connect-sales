@@ -40,7 +40,10 @@ export default function Orders() {
       const dateStart = start !== undefined ? start : dateRange.start
       const dateEnd = end !== undefined ? end : dateRange.end
       
-      const { data, error } = await getOrders(undefined, dateStart, dateEnd)
+      // Mapear o filtro de origem para o parâmetro da função
+      const dataSource = originFilter === 'all' ? 'all' : originFilter as 'webhook' | 'imported'
+      
+      const { data, error } = await getOrders(undefined, dateStart, dateEnd, dataSource)
       if (error) {
         console.error('Erro ao carregar pedidos:', error)
       } else {
@@ -70,7 +73,7 @@ export default function Orders() {
         (dateRange.start && dateRange.end && dateRange.end >= dateRange.start)) {
       fetchOrders(dateRange.start, dateRange.end)
     }
-  }, [dateRange.start, dateRange.end])
+  }, [dateRange.start, dateRange.end, originFilter])
 
   // Obter lista única de produtos para o filtro
   const uniqueProducts = Array.from(new Set(orders.map(order => order.product_name).filter(Boolean)))

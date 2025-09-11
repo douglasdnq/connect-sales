@@ -48,11 +48,20 @@ export async function POST(request: NextRequest) {
           'Formação': 'education'
         }
 
+        // Corrigir fuso horário do form_date (Respondi envia em UTC, convertemos para Brasília UTC-3)
+        const adjustFormDate = (dateString: string) => {
+          if (!dateString) return new Date().toISOString()
+          const date = new Date(dateString)
+          // Subtrair 3 horas para converter UTC para horário de Brasília
+          const adjustedDate = new Date(date.getTime() - (3 * 60 * 60 * 1000))
+          return adjustedDate.toISOString()
+        }
+
         // Criar dados mapeados
         const leadData: any = {
           lead_source: row.lead_source || 'google-sheets',
           status: row.status || 'new',
-          form_date: row.form_date || new Date().toISOString(),
+          form_date: row.form_date ? adjustFormDate(row.form_date) : new Date().toISOString(),
           utm_source: row.utm_source || null,
           utm_medium: row.utm_medium || null,
           utm_campaign: row.utm_campaign || null,

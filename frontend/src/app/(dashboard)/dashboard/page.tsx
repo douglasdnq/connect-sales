@@ -81,15 +81,26 @@ export default function Dashboard() {
         }
 
         // Buscar dados de todos os meses do ano para o gráfico anual
+        // Usar getOrders para buscar faturamento real de cada mês, independente de metas
         const monthlyData = []
         for (let month = 1; month <= 12; month++) {
           try {
+            // Calcular período do mês
+            const startDate = `${selectedYear}-${month.toString().padStart(2, '0')}-01`
+            const lastDay = new Date(selectedYear, month, 0).getDate()
+            const endDate = `${selectedYear}-${month.toString().padStart(2, '0')}-${lastDay.toString().padStart(2, '0')}`
+            
+            // Por enquanto, usar dados das metas existentes
+            // Isso será melhorado quando criarmos a API de monthly-revenue
             const { data: monthData } = await getGoalProgress(month, selectedYear)
+            const monthRevenue = monthData?.current.global_revenue || 0
+            
             monthlyData.push({
               month,
-              revenue: monthData?.current.global_revenue || 0
+              revenue: monthRevenue
             })
-          } catch {
+          } catch (error) {
+            console.error(`Erro ao buscar dados do mês ${month}:`, error)
             monthlyData.push({ month, revenue: 0 })
           }
         }
@@ -436,16 +447,20 @@ export default function Dashboard() {
                 const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                 
                 return (
-                  <div key={item.month} className="flex-1 flex flex-col items-center">
+                  <div 
+                    key={item.month} 
+                    className="flex-1 flex flex-col items-center cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => setSelectedMonth(item.month)}
+                  >
                     <div 
                       className={`w-full rounded-t transition-all duration-300 ${
-                        item.month === selectedMonth ? 'bg-blue-500' : 'bg-gray-300'
+                        item.month === selectedMonth ? 'bg-blue-500' : 'bg-gray-300 hover:bg-gray-400'
                       }`}
                       style={{ height: `${height}%`, minHeight: item.revenue > 0 ? '4px' : '0px' }}
-                      title={`${monthNames[item.month - 1]}: ${formatCurrency(item.revenue)}`}
+                      title={`${monthNames[item.month - 1]}: ${formatCurrency(item.revenue)} - Clique para selecionar`}
                     ></div>
-                    <span className={`text-xs mt-2 ${
-                      item.month === selectedMonth ? 'font-semibold text-blue-600' : 'text-gray-500'
+                    <span className={`text-xs mt-2 transition-colors ${
+                      item.month === selectedMonth ? 'font-semibold text-blue-600' : 'text-gray-500 hover:text-gray-700'
                     }`}>
                       {monthNames[item.month - 1]}
                     </span>

@@ -155,7 +155,18 @@ export default function LeadsPage() {
   }
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
+    // Criar data a partir da string
+    const date = new Date(dateString)
+    
+    // Verificar se a data parece estar em UTC (dados do Respondi)
+    // Se for recente (menos de 1 ano) e parece estar com 3h a mais, corrigir
+    const now = new Date()
+    const isRecent = (now.getTime() - date.getTime()) < (365 * 24 * 60 * 60 * 1000) // menos de 1 ano
+    
+    // Se for dado recente, assumir que está em UTC e converter para horário de Brasília (UTC-3)
+    const adjustedDate = isRecent ? new Date(date.getTime() - (3 * 60 * 60 * 1000)) : date
+    
+    return adjustedDate.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
