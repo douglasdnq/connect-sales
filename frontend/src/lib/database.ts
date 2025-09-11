@@ -76,12 +76,14 @@ export async function getMonthlyRevenue(year: number) {
         
         let revenue = 0
 
-        if (event.event_type === 'order.paid' || event.event_type === 'order.completed') {
+        if (event.event_type === 'paid' || event.event_type === 'imported_paid') {
           // Extrair valor baseado na plataforma
           const platformName = (event.platforms as any)?.name || null
-          if (platformName === 'Kiwify') {
-            revenue = payload?.order_value || payload?.gross_amount || 0
-          } else if (platformName === 'Digital Manager Guru') {
+          if (platformName === 'Kiwify' || platformName === 'kiwify') {
+            // Kiwify values are in cents, need to convert to reais
+            const commissions = payload?.Commissions
+            revenue = (commissions?.charge_amount || commissions?.product_base_price || 0) / 100
+          } else if (platformName === 'Digital Manager Guru' || platformName === 'dmg') {
             revenue = parseFloat(payload?.valor_liquido || payload?.net_amount || '0')
           }
         }

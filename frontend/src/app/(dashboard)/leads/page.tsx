@@ -169,10 +169,18 @@ export default function LeadsPage() {
     return adjustedDate.toLocaleDateString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     })
+  }
+
+  const formatWhatsAppLink = (whatsapp: string) => {
+    // Remove todos os caracteres não numéricos
+    const cleanNumber = whatsapp.replace(/\D/g, '')
+    
+    // Adiciona o código do país se não tiver
+    const formattedNumber = cleanNumber.startsWith('55') ? cleanNumber : `55${cleanNumber}`
+    
+    return `https://wa.me/${formattedNumber}`
   }
 
   const toggleLeadSelection = (leadId: string) => {
@@ -524,12 +532,17 @@ export default function LeadsPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {lead.whatsapp ? (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Phone className="w-4 h-4 mr-2" />
-                        {lead.whatsapp}
-                      </div>
+                      <a 
+                        href={formatWhatsAppLink(lead.whatsapp)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-full transition-colors"
+                        title={`Abrir WhatsApp: ${lead.whatsapp}`}
+                      >
+                        <Phone className="w-4 h-4" />
+                      </a>
                     ) : (
-                      <span className="text-gray-400">Não informado</span>
+                      <span className="text-gray-400">-</span>
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
