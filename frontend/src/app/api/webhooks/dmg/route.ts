@@ -65,8 +65,10 @@ export async function POST(request: NextRequest) {
       console.log('Plataforma DMG criada com ID:', platform.id);
     }
 
-    // Generate event hash for idempotency (simple hash based on payload id and timestamp)
-    const eventHash = `dmg_${payload.id}_${payload.dates?.updated_at || new Date().toISOString()}`;
+    // Generate event hash for idempotency (using stable identifiers)
+    // Use payload.id + status + webhook_type to create a stable hash that prevents duplicates
+    // but allows status updates (like pending -> approved)
+    const eventHash = `dmg_${payload.id}_${payload.status}_${payload.webhook_type || 'default'}`;
 
     // Check if event already exists
     const { data: existingEvent } = await supabase
@@ -83,6 +85,29 @@ export async function POST(request: NextRequest) {
         order_id: payload.id,
         event_hash: eventHash
       }, { status: 200 });
+    }
+
+    // Also check for the same DMG order ID with different status to prevent duplicates
+    const { data: existingOrderEvents } = await supabase
+      .from('raw_events')
+      .select('id, event_hash, payload_json')
+      .eq('platform_id', platform.id)
+      .like('event_hash', `dmg_${payload.id}_%`);
+
+    if (existingOrderEvents && existingOrderEvents.length > 0) {
+      console.log(`Encontrados ${existingOrderEvents.length} eventos existentes para o pedido DMG ${payload.id}`);
+
+      // Check if this is exactly the same event (same status)
+      const exactMatch = existingOrderEvents.find(event => event.event_hash === eventHash);
+      if (exactMatch) {
+        console.log('Evento exato já processado:', eventHash);
+        return NextResponse.json({
+          status: 'already_processed',
+          message: 'Evento idêntico já foi processado',
+          order_id: payload.id,
+          event_hash: eventHash
+        }, { status: 200 });
+      }
     }
 
     // Save to raw_events table

@@ -330,8 +330,24 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
   })
 
   // Para dados importados, não agrupar - mostrar todos os registros
-  // Para webhooks, agrupar apenas se necessário
-  const transformedData = allTransformedData?.sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime()) || []
+  // Para webhooks, agrupar por platform_order_id para evitar duplicatas
+  let transformedData = allTransformedData || []
+
+  if (dataSource !== 'imported') {
+    // Agrupar por platform_order_id e platform para mostrar apenas a versão mais recente de cada pedido
+    const orderMap = new Map()
+
+    transformedData.forEach(order => {
+      const key = `${order.platform_name}_${order.platform_order_id}`
+      if (!orderMap.has(key) || new Date(order.order_date) > new Date(orderMap.get(key).order_date)) {
+        orderMap.set(key, order)
+      }
+    })
+
+    transformedData = Array.from(orderMap.values())
+  }
+
+  transformedData = transformedData.sort((a, b) => new Date(b.order_date).getTime() - new Date(a.order_date).getTime())
 
   return { data: transformedData, error }
 }
