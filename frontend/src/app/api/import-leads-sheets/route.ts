@@ -17,7 +17,8 @@ export async function POST(request: NextRequest) {
       created: 0,
       updated: 0,
       errors: 0,
-      processed: sheetsData.length
+      processed: sheetsData.length,
+      errorDetails: [] as string[]
     }
 
     for (const row of sheetsData) {
@@ -61,7 +62,8 @@ export async function POST(request: NextRequest) {
         const leadData: any = {
           lead_source: row.lead_source || 'google-sheets',
           status: row.status || 'new',
-          form_date: row.form_date ? adjustFormDate(row.form_date) : new Date().toISOString(),
+          form_date: row.Data || row.form_date ? adjustFormDate(row.Data || row.form_date) : new Date().toISOString(),
+          form_id: row.ID || row.form_id || null,
           utm_source: row.utm_source || null,
           utm_medium: row.utm_medium || null,
           utm_campaign: row.utm_campaign || null,
@@ -71,6 +73,8 @@ export async function POST(request: NextRequest) {
           fbclid: row.fbclid || null,
         }
 
+        console.log('Lead data antes do mapeamento:', leadData)
+
         // Mapear campos do formulário
         Object.entries(row).forEach(([key, value]) => {
           const mappedField = fieldMapping[key] || key.toLowerCase().replace(/\s+/g, '_')
@@ -78,6 +82,8 @@ export async function POST(request: NextRequest) {
             leadData[mappedField] = value
           }
         })
+
+        console.log('Lead data após mapeamento:', leadData)
 
         // Converter idade para número se necessário e tratar strings vazias
         if (leadData.age !== undefined && leadData.age !== null) {
@@ -140,6 +146,7 @@ export async function POST(request: NextRequest) {
           if (error) {
             console.error('Erro ao atualizar lead:', error)
             results.errors++
+            results.errorDetails.push(`Erro ao atualizar lead: ${error.message}`)
           } else {
             results.updated++
           }
@@ -156,13 +163,15 @@ export async function POST(request: NextRequest) {
           if (error) {
             console.error('Erro ao criar lead:', error)
             results.errors++
+            results.errorDetails.push(`Erro ao criar lead: ${error.message}`)
           } else {
             results.created++
           }
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Erro ao processar linha:', error)
         results.errors++
+        results.errorDetails.push(`Erro ao processar linha: ${error.message || error.toString()}`)
       }
     }
 
