@@ -149,6 +149,12 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   handler satisfies RouteHandlerConfig<"/api/migrate">
 }
 
+// Validate ../../src/app/api/webhooks/dmg/route.ts
+{
+  const handler = {} as typeof import("../../src/app/api/webhooks/dmg/route.js")
+  handler satisfies RouteHandlerConfig<"/api/webhooks/dmg">
+}
+
 
 
 
