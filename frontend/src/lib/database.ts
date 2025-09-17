@@ -273,9 +273,12 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
       product_name: (() => {
         const platformName = event.platforms?.name
 
-        // Para DMG, usar product.name
+        // Para DMG, tentar múltiplas fontes
         if (platformName === 'Digital Manager Guru') {
-          return event.payload_json?.product?.name || 'N/A'
+          // Tentar items[0].name primeiro, depois product.name
+          const itemName = event.payload_json?.items?.[0]?.name
+          const productName = event.payload_json?.product?.name
+          return itemName || productName || 'N/A'
         }
 
         // Para Kiwify (lógica original)
@@ -287,9 +290,12 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
       product_id: (() => {
         const platformName = event.platforms?.name
 
-        // Para DMG, usar product.id
+        // Para DMG, tentar múltiplas fontes
         if (platformName === 'Digital Manager Guru') {
-          return event.payload_json?.product?.id || 'N/A'
+          // Tentar items[0].id primeiro, depois product.id
+          const itemId = event.payload_json?.items?.[0]?.id
+          const productId = event.payload_json?.product?.id
+          return itemId || productId || 'N/A'
         }
 
         // Para Kiwify (lógica original)
