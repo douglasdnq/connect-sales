@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,14 +37,85 @@ export async function POST(request: NextRequest) {
       confirmed_at: payload.dates?.confirmed_at
     });
 
-    // Here you could forward to the Supabase function with auth header
-    // or process directly in the database
+    // Get or create DMG platform
+    let { data: platform, error: platformError } = await supabase
+      .from('platforms')
+      .select('id')
+      .eq('name', 'Digital Manager Guru')
+      .single();
 
-    // For now, just return success to stop DMG retries
+    // If platform doesn't exist, create it
+    if (platformError || !platform) {
+      console.log('Plataforma DMG não encontrada, criando...');
+      const { data: newPlatform, error: createError } = await supabase
+        .from('platforms')
+        .insert({ name: 'Digital Manager Guru' })
+        .select('id')
+        .single();
+
+      if (createError) {
+        console.error('Erro ao criar plataforma DMG:', createError);
+        return NextResponse.json(
+          { error: 'Erro ao criar plataforma DMG', details: createError.message },
+          { status: 500 }
+        );
+      }
+
+      platform = newPlatform;
+      console.log('Plataforma DMG criada com ID:', platform.id);
+    }
+
+    // Generate event hash for idempotency (simple hash based on payload id and timestamp)
+    const eventHash = `dmg_${payload.id}_${payload.dates?.updated_at || new Date().toISOString()}`;
+
+    // Check if event already exists
+    const { data: existingEvent } = await supabase
+      .from('raw_events')
+      .select('id')
+      .eq('event_hash', eventHash)
+      .single();
+
+    if (existingEvent) {
+      console.log('Evento já processado:', eventHash);
+      return NextResponse.json({
+        status: 'already_processed',
+        message: 'Evento já foi processado anteriormente',
+        order_id: payload.id,
+        event_hash: eventHash
+      }, { status: 200 });
+    }
+
+    // Save to raw_events table
+    const { data: savedEvent, error: saveError } = await supabase
+      .from('raw_events')
+      .insert({
+        platform_id: platform.id,
+        event_type: payload.status,
+        payload_json: payload,
+        event_hash: eventHash,
+        received_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (saveError) {
+      console.error('Erro ao salvar evento DMG:', saveError);
+      return NextResponse.json(
+        {
+          error: 'Erro ao salvar evento',
+          message: saveError.message
+        },
+        { status: 500 }
+      );
+    }
+
+    console.log('Evento DMG salvo com sucesso:', savedEvent.id);
     const response = {
-      status: 'success',
-      message: 'Webhook DMG processado com sucesso via API route',
+      status: 'accepted',
+      message: 'Webhook DMG processado e salvo com sucesso',
       order_id: payload.id,
+      event_id: savedEvent.id,
+      event_hash: eventHash,
       timestamp: new Date().toISOString()
     };
 
