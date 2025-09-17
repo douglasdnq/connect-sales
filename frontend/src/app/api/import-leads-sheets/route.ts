@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
           'Qual é o seu momento em relação aos estudos para Área Fiscal?': 'fiscal_study_moment',
           'Quanto tempo você pode dedicar aos estudos para se tornar Auditor-Fiscal?': 'study_time_dedication',
           'Por que você acredita que a Mentoria Tributum é ideal para você agora?': 'why_mentoria_ideal',
+          'Estamos quase finalizando...\n\nPor que você acredita que a Mentoria Tributum é ideal para você agora?': 'why_mentoria_ideal',
           'Se houvesse apenas 1 vaga na mentoria hoje, por que ela deveria ser sua?': 'why_deserve_spot',
           'A Mentoria é um programa de alto impacto para acelerar sua aprovação. O investimento atual é de:': 'investment_type',
           'É uma prioridade para você iniciar sua preparação imediatamente?': 'priority_start',
@@ -46,7 +47,15 @@ export async function POST(request: NextRequest) {
           'Email': 'email',
           'WhatsApp': 'whatsapp',
           'Idade': 'age',
-          'Formação': 'education'
+          'Formação': 'education',
+          // UTM fields - mapear diretamente
+          'utm_source': 'utm_source',
+          'utm_medium': 'utm_medium',
+          'utm_campaign': 'utm_campaign',
+          'utm_term': 'utm_term',
+          'utm_content': 'utm_content',
+          'gclid': 'gclid',
+          'fbclid': 'fbclid'
         }
 
         // Corrigir fuso horário do form_date (Respondi envia em UTC, convertemos para Brasília UTC-3)
@@ -77,7 +86,25 @@ export async function POST(request: NextRequest) {
 
         // Mapear campos do formulário
         Object.entries(row).forEach(([key, value]) => {
-          const mappedField = fieldMapping[key] || key.toLowerCase().replace(/\s+/g, '_')
+          // Usar mapeamento específico se existir
+          let mappedField = fieldMapping[key]
+
+          // Se não houver mapeamento específico, criar um nome de campo válido
+          if (!mappedField) {
+            // Transformar em nome de campo válido: minúsculo, underscores, máximo 63 caracteres
+            mappedField = key
+              .toLowerCase()
+              .replace(/[^\w\s]/g, '') // Remove caracteres especiais
+              .replace(/\s+/g, '_') // Substitui espaços por underscores
+              .substring(0, 50) // Limita o tamanho para evitar nomes muito longos
+
+            // Pular campos que resultariam em nomes muito longos ou problemáticos
+            if (mappedField.length > 50 || mappedField.includes('estamos_quase_finalizando')) {
+              console.log('Pulando campo com nome muito longo:', key)
+              return
+            }
+          }
+
           if (value !== undefined && value !== null && value !== '') {
             leadData[mappedField] = value
           }
