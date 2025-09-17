@@ -1,6 +1,5 @@
 {
-  "/api/webhooks/dmg/route": "app/api/webhooks/dmg/route.js",
   "/(dashboard)/orders/page": "app/(dashboard)/orders/page.js",
-  "/(dashboard)/settings/page": "app/(dashboard)/settings/page.js",
-  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js"
+  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
+  "/(dashboard)/settings/page": "app/(dashboard)/settings/page.js"
 }

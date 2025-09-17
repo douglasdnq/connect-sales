@@ -85,7 +85,9 @@ export default function Orders() {
                          order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.product_name?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter
-    const matchesPlatform = platformFilter === 'all' || order.platform_name?.toLowerCase() === platformFilter.toLowerCase()
+    const matchesPlatform = platformFilter === 'all' ||
+                           order.platform_name?.toLowerCase() === platformFilter.toLowerCase() ||
+                           (platformFilter === 'dmg' && order.platform_name?.toLowerCase() === 'digital manager guru')
     const matchesProduct = productFilter === 'all' || order.product_name === productFilter
     const matchesOrigin = originFilter === 'all' || 
                          (originFilter === 'imported' && order.is_imported) ||
@@ -662,7 +664,7 @@ export default function Orders() {
                               </div>
                               <span className="text-sm text-gray-600">Kiwify</span>
                             </div>
-                          ) : order.platform_name?.toLowerCase() === 'dmg' ? (
+                          ) : (order.platform_name?.toLowerCase() === 'dmg' || order.platform_name?.toLowerCase() === 'digital manager guru') ? (
                             <div className="flex items-center">
                               <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-2">
                                 <span className="text-white text-xs font-bold">D</span>
