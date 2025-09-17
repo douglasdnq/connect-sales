@@ -112,6 +112,27 @@ export async function POST(request: NextRequest) {
 
         console.log('Lead data após mapeamento:', leadData)
 
+        // Garantir que campos essenciais tenham valores padrão
+        if (!leadData.full_name || leadData.full_name.trim() === '') {
+          leadData.full_name = 'Lead Anônimo'
+        }
+
+        // Limpar e validar whatsapp
+        if (leadData.whatsapp) {
+          leadData.whatsapp = leadData.whatsapp.toString().replace(/[^\d]/g, '')
+          if (leadData.whatsapp.length < 10) {
+            leadData.whatsapp = null // WhatsApp inválido
+          }
+        }
+
+        // Limpar e validar email
+        if (leadData.email && typeof leadData.email === 'string') {
+          leadData.email = leadData.email.toLowerCase().trim()
+          if (!leadData.email.includes('@')) {
+            leadData.email = null // Email inválido
+          }
+        }
+
         // Converter idade para número se necessário e tratar strings vazias
         if (leadData.age !== undefined && leadData.age !== null) {
           if (typeof leadData.age === 'string') {
@@ -138,6 +159,14 @@ export async function POST(request: NextRequest) {
           }
         } else {
           leadData.score = null
+        }
+
+        // Validar se temos pelo menos email ou whatsapp (campos mínimos necessários)
+        if (!leadData.email && !leadData.whatsapp) {
+          console.log('Lead descartado: sem email nem whatsapp')
+          results.errors++
+          results.errorDetails.push('Lead sem email nem whatsapp - dados insuficientes')
+          continue // Pular para o próximo lead
         }
 
         // Verificar se já existe um lead com esse email ou whatsapp
