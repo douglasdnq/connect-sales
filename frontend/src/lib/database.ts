@@ -178,63 +178,121 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
     
     return {
       id: event.id.toString(),
-      platform_order_id: event.payload_json?.order_id || 'N/A',
+      platform_order_id: (() => {
+        const platformName = event.platforms?.name
+        if (platformName === 'Digital Manager Guru') {
+          return event.payload_json?.id || 'N/A'
+        }
+        return event.payload_json?.order_id || 'N/A'
+      })(),
       order_date: event.received_at,
       created_at: event.received_at,
       status: (() => {
+        const platformName = event.platforms?.name
+
+        // Para DMG, usar o campo 'status' diretamente
+        if (platformName === 'Digital Manager Guru') {
+          const dmgStatus = event.payload_json?.status?.toLowerCase()
+          if (dmgStatus === 'approved') return 'paid'
+          if (dmgStatus === 'canceled') return 'canceled'
+          if (dmgStatus === 'refunded') return 'refunded'
+          if (dmgStatus === 'chargeback') return 'chargeback'
+          return 'pending'
+        }
+
+        // Para Kiwify (lógica original)
         const currentOrderStatus = event.payload_json?.order_status?.toLowerCase()
         const webhookEvent = event.payload_json?.webhook_event_type?.toLowerCase()
-        
-        // Mapear status baseado nos campos da Kiwify
+
         if (currentOrderStatus === 'approved' || webhookEvent?.includes('approved')) return 'paid'
         if (currentOrderStatus === 'paid' || webhookEvent?.includes('paid')) return 'paid'
         if (currentOrderStatus === 'refunded' || webhookEvent?.includes('refund')) return 'refunded'
         if (currentOrderStatus === 'canceled' || webhookEvent?.includes('cancel')) return 'canceled'
         if (currentOrderStatus === 'chargeback' || webhookEvent?.includes('chargeback')) return 'chargeback'
-        
+
         return 'pending' // default
       })(),
       original_status: event.payload_json?.order_status || event.payload_json?.webhook_event_type || 'unknown', // Para debug
       csv_status: event.import_tag ? 'from_csv' : 'from_webhook', // Identificar origem
       gross_amount: (() => {
+        const platformName = event.platforms?.name
+
+        // Para DMG, usar payment.gross (já em reais)
+        if (platformName === 'Digital Manager Guru') {
+          return event.payload_json?.payment?.gross || 0
+        }
+
+        // Para Kiwify (valores em centavos, converter para reais)
         const rawValue = event.payload_json?.Commissions?.product_base_price || 0
-        const convertedValue = rawValue / 100
-        return convertedValue
+        return rawValue / 100
       })(),
       net_amount: (() => {
+        const platformName = event.platforms?.name
+
+        // Para DMG, usar payment.total (valor final com taxas)
+        if (platformName === 'Digital Manager Guru') {
+          return event.payload_json?.payment?.total || 0
+        }
+
+        // Para Kiwify (lógica original)
         const commissions = event.payload_json?.Commissions
-        
-        // Campo principal para comissões na Kiwify: my_commission
         const myCommission = commissions?.my_commission
-        // Campo usado nos Example Products: settlement_amount  
         const settlementAmount = commissions?.settlement_amount
-        
-        // Priorizar my_commission que é usado nas ordens reais da Kiwify
         const rawValue = myCommission || settlementAmount || 0
-        const convertedValue = rawValue / 100
-        
-        return convertedValue
+        return rawValue / 100
       })(),
       currency: event.payload_json?.Commissions?.currency || 'BRL',
       customer_name: (() => {
+        const platformName = event.platforms?.name
+
+        // Para DMG, usar contact.name
+        if (platformName === 'Digital Manager Guru') {
+          return event.payload_json?.contact?.name || 'N/A'
+        }
+
+        // Para Kiwify (lógica original)
         const name = event.payload_json?.Customer?.full_name
         if (name) return name
         if (event.import_tag) return 'Cliente Importado'
         return 'N/A'
       })(),
       customer_email: (() => {
+        const platformName = event.platforms?.name
+
+        // Para DMG, usar contact.email
+        if (platformName === 'Digital Manager Guru') {
+          return event.payload_json?.contact?.email || 'N/A'
+        }
+
+        // Para Kiwify (lógica original)
         const email = event.payload_json?.Customer?.email
         if (email) return email
         if (event.import_tag) return 'imported@email.com'
         return 'N/A'
       })(),
       product_name: (() => {
+        const platformName = event.platforms?.name
+
+        // Para DMG, usar product.name
+        if (platformName === 'Digital Manager Guru') {
+          return event.payload_json?.product?.name || 'N/A'
+        }
+
+        // Para Kiwify (lógica original)
         const product = event.payload_json?.Product?.product_name
         if (product) return product
         if (event.import_tag) return 'Produto Importado'
         return 'N/A'
       })(),
       product_id: (() => {
+        const platformName = event.platforms?.name
+
+        // Para DMG, usar product.id
+        if (platformName === 'Digital Manager Guru') {
+          return event.payload_json?.product?.id || 'N/A'
+        }
+
+        // Para Kiwify (lógica original)
         const id = event.payload_json?.Product?.product_id
         if (id) return id
         if (event.import_tag) return 'imported'
@@ -245,10 +303,23 @@ export async function getOrders(limit?: number, startDate?: string, endDate?: st
       import_tag: event.import_tag, // Tag de importação
       is_imported: !!event.import_tag, // Boolean para identificar se foi importado
       platforms: event.platforms,
-      customers: {
-        name: event.payload_json?.Customer?.full_name,
-        email: event.payload_json?.Customer?.email
-      }
+      customers: (() => {
+        const platformName = event.platforms?.name
+
+        // Para DMG
+        if (platformName === 'Digital Manager Guru') {
+          return {
+            name: event.payload_json?.contact?.name,
+            email: event.payload_json?.contact?.email
+          }
+        }
+
+        // Para Kiwify (lógica original)
+        return {
+          name: event.payload_json?.Customer?.full_name,
+          email: event.payload_json?.Customer?.email
+        }
+      })()
     }
   })
 
