@@ -11,7 +11,7 @@ export default function Orders() {
   const [orders, setOrders] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<string>('paid')
   const [platformFilter, setPlatformFilter] = useState<string>('all')
   const [productFilter, setProductFilter] = useState<string>('all')
   const [originFilter, setOriginFilter] = useState<string>('all') // all, imported, webhook
