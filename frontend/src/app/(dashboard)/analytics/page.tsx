@@ -67,6 +67,8 @@ export default function AnalyticsPage() {
       const { data, error } = await query
 
       if (error) throw error
+
+
       setLeads(data || [])
     } catch (error) {
       console.error('Erro ao buscar leads:', error)
@@ -79,9 +81,15 @@ export default function AnalyticsPage() {
   const getIdealClientMetrics = () => {
     const totalLeads = leads.length
     const idealAgeLeads = leads.filter(lead => lead.age >= 25 && lead.age <= 48).length
-    const idealSalaryLeads = leads.filter(lead =>
-      ['Acima de R$ 10.000,00', 'Entre R$ 7.000,00 e R$ 10.000,00', 'Entre R$ 5.000,00 e R$ 7.000,00', 'Entre R$ 3.000,00 e R$ 5.000,00'].includes(lead.salary_range)
-    ).length
+
+    // Usar lógica flexível para salário ideal (acima de R$ 3.000)
+    const idealSalaryLeads = leads.filter(lead => {
+      const salary = lead.salary_range || ''
+      return (salary.includes('3.000') && salary.includes('6.000')) ||
+             (salary.includes('6.000') && salary.includes('10.000')) ||
+             (salary.includes('10.000') && salary.includes('Acima'))
+    }).length
+
     const idealEducationLeads = leads.filter(lead =>
       lead.education?.toLowerCase().includes('engenharia') ||
       lead.education?.toLowerCase().includes('militar') ||
@@ -127,24 +135,54 @@ export default function AnalyticsPage() {
 
   // Distribuição por Salário
   const getSalaryDistribution = () => {
-    const salaryOrder = [
-      'Até R$ 3.000,00',
-      'Entre R$ 3.000,00 e R$ 5.000,00',
-      'Entre R$ 5.000,00 e R$ 7.000,00',
-      'Entre R$ 7.000,00 e R$ 10.000,00',
-      'Acima de R$ 10.000,00'
+    // Faixas conforme especificado: até 3k, 3k-6k, 6k-10k, acima de 10k
+    const salaryGroups = [
+      {
+        label: 'Até R$ 3.000',
+        match: (salary: string) => salary?.includes('3.000') && salary?.includes('Até'),
+        ideal: false
+      },
+      {
+        label: 'R$ 3.000 - R$ 6.000',
+        match: (salary: string) => salary?.includes('3.000') && salary?.includes('6.000'),
+        ideal: true
+      },
+      {
+        label: 'R$ 6.000 - R$ 10.000',
+        match: (salary: string) => salary?.includes('6.000') && salary?.includes('10.000'),
+        ideal: true
+      },
+      {
+        label: 'Acima de R$ 10.000',
+        match: (salary: string) => salary?.includes('10.000') && salary?.includes('Acima'),
+        ideal: true
+      }
     ]
 
-    return salaryOrder.map(salary => {
-      const count = leads.filter(lead => lead.salary_range === salary).length
-      const ideal = !salary.includes('Até R$ 3.000,00')
+    const classificados = salaryGroups.map(group => {
+      const count = leads.filter(lead => group.match(lead.salary_range || '')).length
       return {
-        name: salary.replace('Entre ', '').replace('Acima de ', '+'),
+        name: group.label,
         value: count,
         percentage: leads.length > 0 ? ((count / leads.length) * 100).toFixed(1) : '0',
-        ideal
+        ideal: group.ideal
       }
     })
+
+    // Adicionar valores não classificados
+    const totalClassificados = classificados.reduce((sum, item) => sum + item.value, 0)
+    const naoClassificados = leads.length - totalClassificados
+
+    if (naoClassificados > 0) {
+      classificados.push({
+        name: 'Outros/Não informado',
+        value: naoClassificados,
+        percentage: leads.length > 0 ? ((naoClassificados / leads.length) * 100).toFixed(1) : '0',
+        ideal: false
+      })
+    }
+
+    return classificados.filter(item => item.value > 0)
   }
 
   // Top Formações
@@ -205,6 +243,7 @@ export default function AnalyticsPage() {
       }
     })
   }
+
 
   const metrics = getIdealClientMetrics()
   const ageData = getAgeDistribution()
@@ -398,23 +437,52 @@ export default function AnalyticsPage() {
         {/* Distribuição por Salário */}
         <div className="bg-white p-6 rounded-lg shadow border">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Distribuição por Salário</h3>
-          <ResponsiveContainer width="100%" height={300}>
+          <ResponsiveContainer width="100%" height={350}>
             <PieChart>
               <Pie
                 data={salaryData}
                 cx="50%"
-                cy="50%"
+                cy="45%"
                 labelLine={false}
-                label={({ name, percentage }) => `${name}: ${percentage}%`}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
               >
-                {salaryData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.ideal ? COLORS[index % COLORS.length] : '#9CA3AF'} />
-                ))}
+                {salaryData.map((entry, index) => {
+                  // Cores diferentes para cada faixa
+                  const colorMap = [
+                    '#EF4444', // Vermelho para "Até 3k" (não ideal)
+                    '#10B981', // Verde para "3k-6k" (ideal)
+                    '#3B82F6', // Azul para "6k-10k" (ideal)
+                    '#F59E0B', // Amarelo para "Acima 10k" (ideal)
+                    '#9CA3AF'  // Cinza para "Outros"
+                  ]
+                  return (
+                    <Cell key={`cell-${index}`} fill={colorMap[index] || '#9CA3AF'} />
+                  )
+                })}
               </Pie>
-              <Tooltip />
+              <Tooltip
+                formatter={(value: any, name: any, props: any) => [
+                  `${value} leads (${props.payload.percentage}%)`,
+                  'Quantidade'
+                ]}
+                labelFormatter={(label) => `Faixa: ${label}`}
+              />
+              <Legend
+                verticalAlign="bottom"
+                height={60}
+                wrapperStyle={{ fontSize: '12px', paddingTop: '10px' }}
+                formatter={(value, entry: any) => {
+                  // Encurtar os nomes para não estourar o container
+                  const shortName = value
+                    .replace('R$ 3.000 - R$ 6.000', '3k-6k')
+                    .replace('R$ 6.000 - R$ 10.000', '6k-10k')
+                    .replace('Até R$ 3.000', 'Até 3k')
+                    .replace('Acima de R$ 10.000', '+10k')
+                  return `${shortName}: ${entry.payload.percentage}%`
+                }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -534,6 +602,7 @@ export default function AnalyticsPage() {
           </div>
         </div>
       </div>
+
     </div>
   )
 }
