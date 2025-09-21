@@ -543,7 +543,7 @@ export default function Orders() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full table-fixed">
                 <thead className="bg-gray-50/80">
                   <tr>
                     <th className="w-12 px-3 py-4 text-left">
@@ -554,25 +554,25 @@ export default function Orders() {
                         className="w-4 h-4"
                       />
                     </th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-24 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Data
                     </th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-40 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Cliente
                     </th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-48 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Produto
                     </th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-24 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Comissão
                     </th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-24 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-28 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Plataforma
                     </th>
-                    <th className="w-20 px-4 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-20 px-3 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
@@ -588,7 +588,7 @@ export default function Orders() {
                           className="w-4 h-4"
                         />
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-3 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <Calendar className="h-4 w-4 text-gray-400 mr-3" />
                           <div>
@@ -611,7 +611,7 @@ export default function Orders() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-3 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <User className="h-4 w-4 text-gray-400 mr-3" />
                           <div>
@@ -624,7 +624,7 @@ export default function Orders() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4">
+                      <td className="px-3 py-4">
                         <div className="flex items-center">
                           <Package className="h-4 w-4 text-gray-400 mr-3" />
                           <div>
@@ -637,7 +637,7 @@ export default function Orders() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-3 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
                           <div>
@@ -650,12 +650,12 @@ export default function Orders() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-3 py-4 whitespace-nowrap">
                         <span className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full border ${getStatusColor(order.status)}`}>
                           {getStatusText(order.status)}
                         </span>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-3 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           {order.platform_name?.toLowerCase() === 'kiwify' ? (
                             <div className="flex items-center">
@@ -688,7 +688,7 @@ export default function Orders() {
                           )}
                         </div>
                       </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
+                      <td className="px-3 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <button
                             onClick={() => handleViewDetails(order)}
