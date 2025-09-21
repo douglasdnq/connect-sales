@@ -3,18 +3,19 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { 
-  BarChart3, 
-  Settings, 
-  ShoppingBag, 
-  Users, 
-  AlertCircle, 
+import {
+  BarChart3,
+  Settings,
+  ShoppingBag,
+  Users,
+  AlertCircle,
   Calendar,
   Menu,
   X,
   LogOut,
   Target,
-  UserPlus
+  UserPlus,
+  TrendingUp
 } from 'lucide-react'
 import { AuthGuard } from '@/components/auth-guard'
 import { useAuth } from '@/components/auth-provider'
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Pedidos', href: '/orders', icon: ShoppingBag },
   { name: 'Clientes', href: '/customers', icon: Users },
   { name: 'Leads', href: '/leads', icon: UserPlus },
+  { name: 'Analytics', href: '/analytics', icon: TrendingUp },
   { name: 'Metas', href: '/goals', icon: Target },
   { name: 'Eventos', href: '/events', icon: Calendar },
   { name: 'Erros', href: '/errors', icon: AlertCircle },

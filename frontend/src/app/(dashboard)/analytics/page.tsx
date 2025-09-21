@@ -467,7 +467,7 @@ export default function AnalyticsPage() {
                   `${value} leads (${props.payload.percentage}%)`,
                   'Quantidade'
                 ]}
-                labelFormatter={(label) => `Faixa: ${label}`}
+                labelFormatter={(label) => `Faixa Salarial: ${label}`}
               />
               <Legend
                 verticalAlign="bottom"
