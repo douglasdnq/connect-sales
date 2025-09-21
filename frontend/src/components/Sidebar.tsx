@@ -7,10 +7,10 @@ import { LayoutDashboard, Settings, Database, AlertTriangle, Users, BarChart3, W
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Pedidos', href: '/orders', icon: Database },
-  { name: 'Clientes', href: '/customers', icon: Users },
+  { name: 'Leads', href: '/leads', icon: Users },
+  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Eventos', href: '/events', icon: Webhook },
   { name: 'Erros', href: '/errors', icon: AlertTriangle },
-  { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Configurações', href: '/settings', icon: Settings },
 ]
 
