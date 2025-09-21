@@ -62,37 +62,37 @@ export default function DeleteModal({
   )
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-gray-200">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md min-w-0 border border-gray-200 mx-auto my-8">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+        <div className="flex items-start justify-between p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex items-start gap-3 min-w-0 flex-1">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
               {result?.success ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               ) : (
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
               )}
             </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">
+            <div className="min-w-0 flex-1">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 leading-tight">
                 {result?.success ? 'Exclusão Concluída' : title}
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500 mt-1">
                 {result?.success ? 'Registros excluídos com sucesso' : 'Esta ação não pode ser desfeita'}
               </p>
             </div>
           </div>
           <button
             onClick={handleClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1 sm:p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
           >
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {result ? (
             <div className={`p-4 rounded-xl ${result.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
               <div className="flex items-start gap-3">
@@ -190,11 +190,11 @@ export default function DeleteModal({
 
         {/* Footer */}
         {!result && (
-          <div className="border-t border-gray-200 p-6 bg-gray-50 rounded-b-2xl">
-            <div className="flex justify-end gap-3">
+          <div className="border-t border-gray-200 p-4 sm:p-6 bg-gray-50 rounded-b-2xl">
+            <div className="flex flex-col sm:flex-row justify-end gap-3">
               <button
                 onClick={handleClose}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors order-2 sm:order-1"
                 disabled={deleting}
               >
                 Cancelar
@@ -202,17 +202,18 @@ export default function DeleteModal({
               <button
                 onClick={handleDelete}
                 disabled={confirmationText !== 'excluir' || deleting}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-1 sm:order-2"
               >
                 {deleting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    Excluindo...
+                    <span className="hidden sm:inline">Excluindo...</span>
                   </>
                 ) : (
                   <>
                     <Trash2 className="h-4 w-4" />
-                    Excluir {itemCount} Registros
+                    <span className="hidden sm:inline">Excluir {itemCount} Registros</span>
+                    <span className="sm:hidden">Excluir</span>
                   </>
                 )}
               </button>
