@@ -466,10 +466,10 @@ export default function LeadsPage() {
       {/* Tabela de leads */}
       <div className="bg-white rounded-lg shadow border overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-12 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   <input
                     type="checkbox"
                     className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -477,25 +477,25 @@ export default function LeadsPage() {
                     onChange={toggleSelectAll}
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Data de Aplicação
+                <th className="w-24 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Data
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-44 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Nome
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Faixa Salarial
+                <th className="w-32 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Salário
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Prioridade
+                <th className="w-20 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Prior.
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-16 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   WhatsApp
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-28 px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="w-20 px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
                 </th>
               </tr>
@@ -503,7 +503,7 @@ export default function LeadsPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredLeads.map((lead) => (
                 <tr key={lead.id} className={`hover:bg-gray-50 ${selectedLeads.has(lead.id) ? 'bg-blue-50' : ''}`}>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap">
                     <input
                       type="checkbox"
                       className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -511,45 +511,49 @@ export default function LeadsPage() {
                       onChange={() => toggleLeadSelection(lead.id)}
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  <td className="px-3 py-4 whitespace-nowrap text-xs text-gray-600">
                     {formatDate(lead.form_date || lead.created_at)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
+                  <td className="px-3 py-4">
+                    <div className="text-sm font-medium text-gray-900 truncate" title={lead.full_name || 'Nome não informado'}>
                       {lead.full_name || 'Nome não informado'}
                     </div>
                     {lead.age && (
-                      <div className="text-sm text-gray-500">
+                      <div className="text-xs text-gray-500">
                         {lead.age} anos
                       </div>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {lead.salary_range || 'Não informado'}
+                  <td className="px-3 py-4 text-xs text-gray-600">
+                    <div className="truncate" title={lead.salary_range || 'Não informado'}>
+                      {lead.salary_range ? lead.salary_range.replace('R$ ', '').replace('.000,00', 'k') : 'N/I'}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {lead.priority_start || 'Não informado'}
+                  <td className="px-3 py-4 text-xs text-gray-600">
+                    <div className="truncate" title={lead.priority_start || 'Não informado'}>
+                      {lead.priority_start === 'Sim' ? '✅' : lead.priority_start === 'Não' ? '❌' : '❓'}
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap text-center">
                     {lead.whatsapp ? (
-                      <a 
+                      <a
                         href={formatWhatsAppLink(lead.whatsapp)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center justify-center w-8 h-8 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-full transition-colors"
+                        className="inline-flex items-center justify-center w-7 h-7 text-green-600 hover:text-green-800 hover:bg-green-50 rounded-full transition-colors"
                         title={`Abrir WhatsApp: ${lead.whatsapp}`}
                       >
-                        <Phone className="w-4 h-4" />
+                        <Phone className="w-3 h-3" />
                       </a>
                     ) : (
                       <span className="text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-4 whitespace-nowrap">
                     <select
                       value={lead.status}
                       onChange={(e) => updateLeadStatus(lead.id, e.target.value)}
-                      className={`text-xs px-2 py-1 rounded-full border-0 ${getStatusColor(lead.status)}`}
+                      className={`text-xs px-2 py-1 rounded-full border-0 w-full ${getStatusColor(lead.status)}`}
                     >
                       <option value="new">Novo</option>
                       <option value="contacted">Contatado</option>
@@ -558,27 +562,23 @@ export default function LeadsPage() {
                       <option value="lost">Perdido</option>
                     </select>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                    <button 
-                      onClick={() => viewLead(lead)}
-                      className="text-blue-600 hover:text-blue-900"
-                      title="Visualizar detalhes"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                    <button 
-                      className="text-gray-600 hover:text-gray-900"
-                      title="Editar lead"
-                    >
-                      <Edit className="w-4 h-4" />
-                    </button>
-                    <button 
-                      onClick={() => deleteLead(lead.id)}
-                      className="text-red-600 hover:text-red-900"
-                      title="Excluir lead"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  <td className="px-3 py-4 whitespace-nowrap text-center">
+                    <div className="flex items-center justify-center space-x-1">
+                      <button
+                        onClick={() => viewLead(lead)}
+                        className="text-blue-600 hover:text-blue-900 p-1"
+                        title="Visualizar detalhes"
+                      >
+                        <Eye className="w-3 h-3" />
+                      </button>
+                      <button
+                        onClick={() => deleteLead(lead.id)}
+                        className="text-red-600 hover:text-red-900 p-1"
+                        title="Excluir lead"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
