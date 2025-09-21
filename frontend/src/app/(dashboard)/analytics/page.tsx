@@ -39,10 +39,31 @@ export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState({ start: '', end: '' })
   const [sourceFilter, setSourceFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [availableSources, setAvailableSources] = useState<string[]>([])
 
   useEffect(() => {
     fetchLeads()
   }, [dateRange, sourceFilter, statusFilter])
+
+  useEffect(() => {
+    fetchAvailableSources()
+  }, [])
+
+  const fetchAvailableSources = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('lead_source')
+        .not('lead_source', 'is', null)
+
+      if (error) throw error
+
+      const uniqueSources = [...new Set(data.map(item => item.lead_source))].filter(Boolean)
+      setAvailableSources(uniqueSources)
+    } catch (error) {
+      console.error('Erro ao buscar fontes:', error)
+    }
+  }
 
   const fetchLeads = async () => {
     setLoading(true)
@@ -53,7 +74,10 @@ export default function AnalyticsPage() {
         .order('created_at', { ascending: false })
 
       if (dateRange.start && dateRange.end) {
-        query = query.gte('form_date', dateRange.start).lte('form_date', dateRange.end)
+        // Primeiro tentar por form_date, depois por created_at se form_date for null
+        const startDate = `${dateRange.start}T00:00:00.000Z`
+        const endDate = `${dateRange.end}T23:59:59.999Z`
+        query = query.or(`and(form_date.gte.${startDate},form_date.lte.${endDate}),and(form_date.is.null,created_at.gte.${startDate},created_at.lte.${endDate})`)
       }
 
       if (sourceFilter !== 'all') {
@@ -67,7 +91,6 @@ export default function AnalyticsPage() {
       const { data, error } = await query
 
       if (error) throw error
-
 
       setLeads(data || [])
     } catch (error) {
@@ -320,9 +343,11 @@ export default function AnalyticsPage() {
               className="px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="all">Todas as fontes</option>
-              <option value="google-sheets">Google Sheets</option>
-              <option value="zapier">Zapier</option>
-              <option value="manual">Manual</option>
+              {availableSources.map(source => (
+                <option key={source} value={source}>
+                  {source.charAt(0).toUpperCase() + source.slice(1).replace('-', ' ')}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -490,7 +515,7 @@ export default function AnalyticsPage() {
         {/* Top Formações */}
         <div className="bg-white p-6 rounded-lg shadow border">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Top 10 Formações</h3>
-          <div className="space-y-3 max-h-80 overflow-y-auto">
+          <div className="space-y-3 max-h-80 overflow-y-auto scrollbar-hide">
             {educationData.map((item, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex-1">

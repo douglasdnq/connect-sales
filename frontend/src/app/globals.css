@@ -104,3 +104,12 @@ tr:hover td {
 .sidebar-item:not(.active) {
   @apply text-gray-600 hover:bg-gray-50 hover:text-gray-900;
 }
+
+/* Hide scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
