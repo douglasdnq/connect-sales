@@ -589,64 +589,52 @@ export default function Orders() {
                         />
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <Calendar className="h-4 w-4 text-gray-400 mr-3" />
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {(() => {
-                                const date = new Date(order.order_date)
-                                return date.toLocaleDateString('pt-BR', {
-                                  day: '2-digit',
-                                  month: '2-digit', 
-                                  year: 'numeric'
-                                })
-                              })()}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {new Date(order.order_date).toLocaleTimeString('pt-BR', { 
-                                hour: '2-digit', 
-                                minute: '2-digit' 
-                              })}
-                            </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {(() => {
+                              const date = new Date(order.order_date)
+                              return date.toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })
+                            })()}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {new Date(order.order_date).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
                           </div>
                         </div>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <User className="h-4 w-4 text-gray-400 mr-3" />
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {order.customer_name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {order.customer_email}
-                            </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">
+                            {order.customer_name}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {order.customer_email}
                           </div>
                         </div>
                       </td>
                       <td className="px-3 py-4">
-                        <div className="flex items-center">
-                          <Package className="h-4 w-4 text-gray-400 mr-3" />
-                          <div>
-                            <div className="text-sm font-medium text-gray-900 max-w-xs truncate">
-                              {order.product_name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              ID: {order.platform_order_id}
-                            </div>
+                        <div>
+                          <div className="text-sm font-medium text-gray-900 truncate">
+                            {order.product_name}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            ID: {order.platform_order_id}
                           </div>
                         </div>
                       </td>
                       <td className="px-3 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <DollarSign className="h-4 w-4 text-gray-400 mr-2" />
-                          <div>
-                            <div className="text-sm font-medium text-green-600">
-                              {formatCurrency(order.net_amount)}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Bruto: {formatCurrency(order.gross_amount)}
-                            </div>
+                        <div>
+                          <div className="text-sm font-medium text-green-600">
+                            {formatCurrency(order.net_amount)}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Bruto: {formatCurrency(order.gross_amount)}
                           </div>
                         </div>
                       </td>
