@@ -870,6 +870,9 @@ video {
 .w-7 {
   width: 1.75rem;
 }
+.w-36 {
+  width: 9rem;
+}
 .min-w-0 {
   min-width: 0px;
 }

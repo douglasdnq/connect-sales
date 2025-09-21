@@ -554,22 +554,22 @@ export default function Orders() {
                         className="w-4 h-4"
                       />
                     </th>
-                    <th className="w-24 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-20 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Data
                     </th>
-                    <th className="w-40 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-36 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Cliente
                     </th>
-                    <th className="w-48 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-64 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Produto
                     </th>
-                    <th className="w-24 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-20 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Comissão
                     </th>
-                    <th className="w-24 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-20 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="w-28 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    <th className="w-24 px-3 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                       Plataforma
                     </th>
                     <th className="w-20 px-3 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
