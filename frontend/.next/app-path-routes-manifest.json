@@ -1,0 +1,22 @@
+{
+  "/_not-found/page": "/_not-found",
+  "/api/bulk-delete/route": "/api/bulk-delete",
+  "/api/fix-rls/route": "/api/fix-rls",
+  "/api/import-csv/route": "/api/import-csv",
+  "/api/leads/route": "/api/leads",
+  "/api/import-leads-sheets/route": "/api/import-leads-sheets",
+  "/api/migrate/route": "/api/migrate",
+  "/api/webhooks/dmg/route": "/api/webhooks/dmg",
+  "/page": "/",
+  "/auth/login/page": "/auth/login",
+  "/(dashboard)/customers/page": "/customers",
+  "/(dashboard)/analytics/page": "/analytics",
+  "/(dashboard)/goals/page": "/goals",
+  "/(dashboard)/dashboard/page": "/dashboard",
+  "/(dashboard)/events/page": "/events",
+  "/(dashboard)/leads/import/page": "/leads/import",
+  "/(dashboard)/orders/page": "/orders",
+  "/(dashboard)/errors/page": "/errors",
+  "/(dashboard)/settings/page": "/settings",
+  "/(dashboard)/leads/page": "/leads"
+}

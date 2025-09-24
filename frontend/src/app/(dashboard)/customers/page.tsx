@@ -19,7 +19,8 @@ export default function Customers() {
   const [customers, setCustomers] = useState<CustomerJourney[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  
+  const [journeyFilter, setJourneyFilter] = useState('mentoria') // Filtro padrão: apenas mentoria
+
   // Estados para ordenação
   const [sortField, setSortField] = useState<'name' | 'dzaDate' | 'mentoriaDate' | 'daysBetween' | null>(null)
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
@@ -47,11 +48,31 @@ export default function Customers() {
     fetchCustomers()
   }, [])
 
-  const filteredCustomers = customers.filter(customer => 
-    customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.includes(searchTerm)
-  )
+  const filteredCustomers = customers.filter(customer => {
+    // Filtro de busca
+    const searchMatch = customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                       customer.phone?.includes(searchTerm)
+
+    if (!searchMatch) return false
+
+    // Filtro de jornada
+    switch (journeyFilter) {
+      case 'mentoria':
+        return customer.mentoriaDate !== null
+      case 'dza':
+        return customer.dzaDate !== null
+      case 'dza-mentoria':
+        return customer.dzaDate !== null && customer.mentoriaDate !== null
+      case 'dza-only':
+        return customer.dzaDate !== null && customer.mentoriaDate === null
+      case 'mentoria-only':
+        return customer.mentoriaDate !== null && customer.dzaDate === null
+      case 'all':
+      default:
+        return true
+    }
+  })
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return '-'
@@ -60,15 +81,15 @@ export default function Customers() {
 
   const formatPhone = (phone: string) => {
     if (!phone) return '-'
-    
+
     // Remover caracteres não numéricos
     let cleaned = phone.replace(/\D/g, '')
-    
+
     // Remover código do país +55 se presente
     if (cleaned.startsWith('55') && cleaned.length >= 12) {
       cleaned = cleaned.slice(2)
     }
-    
+
     // Formatar telefone brasileiro (DDD + número)
     if (cleaned.length === 11) {
       // Celular: (XX) 9XXXX-XXXX
@@ -77,8 +98,49 @@ export default function Customers() {
       // Fixo: (XX) XXXX-XXXX
       return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 6)}-${cleaned.slice(6)}`
     }
-    
+
     return phone // Retorna original se não conseguir formatar
+  }
+
+  // Função para identificar origem da venda
+  const getCustomerOrigin = (customer: CustomerJourney) => {
+    if (customer.dzaDate && customer.mentoriaDate) {
+      return {
+        type: 'dza-mentoria',
+        label: 'DZA → Mentoria',
+        icon: '🔄',
+        color: 'text-green-700',
+        bgColor: 'bg-green-50',
+        description: `Cliente comprou DZA em ${formatDate(customer.dzaDate)} e converteu para Mentoria em ${formatDate(customer.mentoriaDate)}`
+      }
+    } else if (customer.dzaDate && !customer.mentoriaDate) {
+      return {
+        type: 'dza-only',
+        label: 'Apenas DZA',
+        icon: '📚',
+        color: 'text-blue-700',
+        bgColor: 'bg-blue-50',
+        description: `Cliente comprou apenas DZA em ${formatDate(customer.dzaDate)}`
+      }
+    } else if (!customer.dzaDate && customer.mentoriaDate) {
+      return {
+        type: 'mentoria-direct',
+        label: 'Mentoria Direta',
+        icon: '⭐',
+        color: 'text-purple-700',
+        bgColor: 'bg-purple-50',
+        description: `Cliente comprou Mentoria diretamente em ${formatDate(customer.mentoriaDate)} (possível origem: Lead/Formulário)`
+      }
+    } else {
+      return {
+        type: 'other',
+        label: 'Outros',
+        icon: '❓',
+        color: 'text-gray-700',
+        bgColor: 'bg-gray-50',
+        description: 'Cliente com outros produtos'
+      }
+    }
   }
 
 
@@ -134,7 +196,7 @@ export default function Customers() {
   // Reset página quando filtros mudam
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchTerm, itemsPerPage])
+  }, [searchTerm, journeyFilter, itemsPerPage])
 
   if (loading) {
     return (
@@ -200,15 +262,32 @@ export default function Customers() {
       {/* Filtros */}
       <div className="card">
         <div className="card-content">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Buscar por nome, email ou telefone..."
-              className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Buscar por nome, email ou telefone..."
+                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+
+            <div className="w-full sm:w-60">
+              <select
+                value={journeyFilter}
+                onChange={(e) => setJourneyFilter(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+              >
+                <option value="mentoria">🎯 Apenas Mentoria</option>
+                <option value="dza-mentoria">🔄 DZA → Mentoria</option>
+                <option value="mentoria-only">⭐ Mentoria Direta</option>
+                <option value="dza-only">📚 Apenas DZA</option>
+                <option value="dza">📈 Todos com DZA</option>
+                <option value="all">👥 Todos os Clientes</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -341,54 +420,48 @@ export default function Customers() {
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <div className="relative group">
-                          <div className="flex items-center text-sm cursor-help">
-                            {customer.dzaDate && customer.mentoriaDate ? (
-                              <>
-                                <TrendingUp className="h-4 w-4 text-green-500 mr-2" />
-                                <span className="text-green-700 font-medium">DZA → Mentoria</span>
-                              </>
-                            ) : customer.dzaDate ? (
-                              <>
-                                <Package className="h-4 w-4 text-blue-500 mr-2" />
-                                <span className="text-blue-700 font-medium">DZA</span>
-                              </>
-                            ) : customer.mentoriaDate ? (
-                              <>
-                                <TrendingUp className="h-4 w-4 text-purple-500 mr-2" />
-                                <span className="text-purple-700 font-medium">Mentoria</span>
-                              </>
-                            ) : (
-                              <>
-                                <Package className="h-4 w-4 text-gray-400 mr-2" />
-                                <span className="text-gray-500">Outros</span>
-                              </>
-                            )}
-                          </div>
-                          
-                          {/* Tooltip com todos os materiais */}
-                          {customer.materials.length > 0 && (
-                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-10 w-80 p-3 bg-gray-800 text-white text-xs rounded-lg shadow-lg">
-                              <div className="font-medium mb-2">Todos os materiais ({customer.materials.length})</div>
-                              <div className="space-y-2 max-h-48 overflow-y-auto">
-                                {customer.materials.map((material, idx) => (
-                                  <div key={idx} className="flex justify-between items-start">
-                                    <div className="flex-1 mr-2">
-                                      <div className="font-medium">{material.name}</div>
-                                      <div className="text-gray-300 text-xs">
-                                        {material.platform}
-                                      </div>
-                                    </div>
-                                    <div className="text-gray-300 text-xs whitespace-nowrap">
-                                      {formatDate(material.date)}
-                                    </div>
-                                  </div>
-                                ))}
+                        {(() => {
+                          const origin = getCustomerOrigin(customer)
+                          return (
+                            <div className="relative group">
+                              <div className={`inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium border cursor-help transition-all duration-200 hover:scale-105 ${origin.bgColor} ${origin.color} border-current border-opacity-20`}>
+                                <span className="mr-2 text-base">{origin.icon}</span>
+                                {origin.label}
                               </div>
-                              <div className="absolute top-full left-6 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
+
+                              {/* Tooltip melhorado */}
+                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-20 w-80 p-4 bg-gray-900 text-white text-xs rounded-lg shadow-xl">
+                                <div className="font-medium text-white mb-2">{origin.description}</div>
+
+                                {customer.materials.length > 0 && (
+                                  <>
+                                    <hr className="border-gray-700 my-3" />
+                                    <div className="font-medium text-gray-300 mb-2">
+                                      Histórico completo ({customer.materials.length} {customer.materials.length === 1 ? 'produto' : 'produtos'})
+                                    </div>
+                                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                                      {customer.materials.map((material, idx) => (
+                                        <div key={idx} className="flex justify-between items-start text-xs">
+                                          <div className="flex-1 mr-2">
+                                            <div className="text-white font-medium">{material.name}</div>
+                                            <div className="text-gray-400 mt-1">
+                                              📦 {material.platform}
+                                            </div>
+                                          </div>
+                                          <div className="text-gray-300 whitespace-nowrap">
+                                            {formatDate(material.date)}
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+
+                                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-900"></div>
+                              </div>
                             </div>
-                          )}
-                        </div>
+                          )
+                        })()}
                       </td>
                     </tr>
                   ))}
