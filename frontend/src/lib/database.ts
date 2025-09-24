@@ -468,7 +468,7 @@ export async function getAdInsights(days = 30) {
   return { data: data as AdInsight[], error }
 }
 
-// Análise de jornada do cliente (DZA → Mentoria)
+// Análise de jornada do cliente (DZA → Mentoria + Leads)
 export async function getCustomersJourney() {
   // Buscar todos os eventos com paginação automática
   let allData: any[] = []
@@ -506,10 +506,38 @@ export async function getCustomersJourney() {
   }
 
   const data = allData
-  const error = null
+  let error = null
+
+  // Buscar leads para cruzamento
+  const { data: leadsData, error: leadsError } = await supabase
+    .from('leads')
+    .select('id, full_name, email, whatsapp, form_date, lead_source, utm_source, status')
+    .order('form_date', { ascending: false })
+
+  if (leadsError) {
+    console.error('Erro ao buscar leads:', leadsError)
+  }
 
   // Processar dados para análise de jornada
   const customerMap = new Map()
+
+  // Criar mapa de leads para cruzamento rápido por email e telefone
+  const leadsMap = new Map()
+  if (leadsData) {
+    leadsData.forEach(lead => {
+      if (lead.email) {
+        const email = lead.email.toLowerCase().trim()
+        leadsMap.set(`email:${email}`, lead)
+      }
+      if (lead.whatsapp) {
+        // Normalizar telefone removendo caracteres especiais
+        const phone = lead.whatsapp.replace(/[^\d]/g, '')
+        if (phone.length >= 10) {
+          leadsMap.set(`phone:${phone}`, lead)
+        }
+      }
+    })
+  }
 
   data?.forEach(event => {
     try {
@@ -541,6 +569,18 @@ export async function getCustomersJourney() {
       if (isNaN(orderDate.getTime())) return
 
       if (!customerMap.has(primaryKey)) {
+        // Buscar lead correspondente por email ou telefone
+        let leadData = null
+        if (email) {
+          leadData = leadsMap.get(`email:${email}`)
+        }
+        if (!leadData && phone) {
+          const normalizedPhone = phone.replace(/[^\d]/g, '')
+          if (normalizedPhone.length >= 10) {
+            leadData = leadsMap.get(`phone:${normalizedPhone}`)
+          }
+        }
+
         customerMap.set(primaryKey, {
           name: fullName,
           email: email,
@@ -549,7 +589,9 @@ export async function getCustomersJourney() {
           dzaDate: null,
           mentoriaDate: null,
           materials: [],
-          daysBetween: null
+          daysBetween: null,
+          leadData: leadData, // Adicionar dados do lead
+          hasLead: !!leadData // Flag indicando se tem lead correspondente
         })
       }
 

@@ -13,6 +13,17 @@ interface CustomerJourney {
   mentoriaDate: string | null
   materials: Array<{ name: string, date: string, platform: string }>
   daysBetween: number | null
+  leadData?: {
+    id: string
+    full_name?: string
+    email?: string
+    whatsapp?: string
+    form_date?: string
+    lead_source?: string
+    utm_source?: string
+    status?: string
+  } | null
+  hasLead: boolean
 }
 
 export default function Customers() {
@@ -62,12 +73,18 @@ export default function Customers() {
         return customer.mentoriaDate !== null
       case 'dza':
         return customer.dzaDate !== null
+      case 'lead-mentoria':
+        return customer.mentoriaDate !== null && customer.hasLead && customer.dzaDate === null
+      case 'lead-dza-mentoria':
+        return customer.dzaDate !== null && customer.mentoriaDate !== null && customer.hasLead
       case 'dza-mentoria':
         return customer.dzaDate !== null && customer.mentoriaDate !== null
       case 'dza-only':
         return customer.dzaDate !== null && customer.mentoriaDate === null
       case 'mentoria-only':
-        return customer.mentoriaDate !== null && customer.dzaDate === null
+        return customer.mentoriaDate !== null && customer.dzaDate === null && !customer.hasLead
+      case 'lead-only':
+        return customer.hasLead && !customer.dzaDate && !customer.mentoriaDate
       case 'all':
       default:
         return true
@@ -104,7 +121,16 @@ export default function Customers() {
 
   // Função para identificar origem da venda
   const getCustomerOrigin = (customer: CustomerJourney) => {
-    if (customer.dzaDate && customer.mentoriaDate) {
+    if (customer.dzaDate && customer.mentoriaDate && customer.hasLead) {
+      return {
+        type: 'lead-dza-mentoria',
+        label: 'Lead → DZA → Mentoria',
+        icon: '🚀',
+        color: 'text-emerald-700',
+        bgColor: 'bg-emerald-50',
+        description: `Cliente preencheu formulário em ${formatDate(customer.leadData?.form_date || null)}, comprou DZA em ${formatDate(customer.dzaDate)} e converteu para Mentoria em ${formatDate(customer.mentoriaDate)}`
+      }
+    } else if (customer.dzaDate && customer.mentoriaDate) {
       return {
         type: 'dza-mentoria',
         label: 'DZA → Mentoria',
@@ -112,6 +138,24 @@ export default function Customers() {
         color: 'text-green-700',
         bgColor: 'bg-green-50',
         description: `Cliente comprou DZA em ${formatDate(customer.dzaDate)} e converteu para Mentoria em ${formatDate(customer.mentoriaDate)}`
+      }
+    } else if (!customer.dzaDate && customer.mentoriaDate && customer.hasLead) {
+      return {
+        type: 'lead-mentoria',
+        label: 'Lead → Mentoria',
+        icon: '🎯',
+        color: 'text-purple-700',
+        bgColor: 'bg-purple-50',
+        description: `Cliente preencheu formulário em ${formatDate(customer.leadData?.form_date || null)} e comprou Mentoria diretamente em ${formatDate(customer.mentoriaDate)}`
+      }
+    } else if (!customer.dzaDate && customer.mentoriaDate) {
+      return {
+        type: 'mentoria-direct',
+        label: 'Mentoria Direta',
+        icon: '⭐',
+        color: 'text-violet-700',
+        bgColor: 'bg-violet-50',
+        description: `Cliente comprou Mentoria diretamente em ${formatDate(customer.mentoriaDate)} (sem formulário identificado)`
       }
     } else if (customer.dzaDate && !customer.mentoriaDate) {
       return {
@@ -122,14 +166,14 @@ export default function Customers() {
         bgColor: 'bg-blue-50',
         description: `Cliente comprou apenas DZA em ${formatDate(customer.dzaDate)}`
       }
-    } else if (!customer.dzaDate && customer.mentoriaDate) {
+    } else if (customer.hasLead && !customer.dzaDate && !customer.mentoriaDate) {
       return {
-        type: 'mentoria-direct',
-        label: 'Mentoria Direta',
-        icon: '⭐',
-        color: 'text-purple-700',
-        bgColor: 'bg-purple-50',
-        description: `Cliente comprou Mentoria diretamente em ${formatDate(customer.mentoriaDate)} (possível origem: Lead/Formulário)`
+        type: 'lead-only',
+        label: 'Apenas Lead',
+        icon: '📝',
+        color: 'text-yellow-700',
+        bgColor: 'bg-yellow-50',
+        description: `Cliente preencheu formulário em ${formatDate(customer.leadData?.form_date || null)} mas ainda não comprou`
       }
     } else {
       return {
@@ -280,10 +324,13 @@ export default function Customers() {
                 onChange={(e) => setJourneyFilter(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-200 rounded-xl bg-white/70 backdrop-blur-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
               >
-                <option value="mentoria">🎯 Apenas Mentoria</option>
+                <option value="mentoria">🎯 Todos Mentoria</option>
+                <option value="lead-mentoria">🎯 Lead → Mentoria</option>
+                <option value="lead-dza-mentoria">🚀 Lead → DZA → Mentoria</option>
                 <option value="dza-mentoria">🔄 DZA → Mentoria</option>
                 <option value="mentoria-only">⭐ Mentoria Direta</option>
                 <option value="dza-only">📚 Apenas DZA</option>
+                <option value="lead-only">📝 Apenas Leads</option>
                 <option value="dza">📈 Todos com DZA</option>
                 <option value="all">👥 Todos os Clientes</option>
               </select>
@@ -433,11 +480,38 @@ export default function Customers() {
                               <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:block z-20 w-80 p-4 bg-gray-900 text-white text-xs rounded-lg shadow-xl">
                                 <div className="font-medium text-white mb-2">{origin.description}</div>
 
+                                {/* Informações do Lead */}
+                                {customer.hasLead && customer.leadData && (
+                                  <>
+                                    <hr className="border-gray-700 my-3" />
+                                    <div className="font-medium text-gray-300 mb-2">
+                                      📝 Dados do Formulário
+                                    </div>
+                                    <div className="space-y-1 text-xs">
+                                      {customer.leadData.lead_source && (
+                                        <div className="text-gray-300">
+                                          <span className="text-gray-400">Fonte:</span> {customer.leadData.lead_source}
+                                        </div>
+                                      )}
+                                      {customer.leadData.utm_source && (
+                                        <div className="text-gray-300">
+                                          <span className="text-gray-400">UTM:</span> {customer.leadData.utm_source}
+                                        </div>
+                                      )}
+                                      {customer.leadData.status && (
+                                        <div className="text-gray-300">
+                                          <span className="text-gray-400">Status:</span> {customer.leadData.status}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </>
+                                )}
+
                                 {customer.materials.length > 0 && (
                                   <>
                                     <hr className="border-gray-700 my-3" />
                                     <div className="font-medium text-gray-300 mb-2">
-                                      Histórico completo ({customer.materials.length} {customer.materials.length === 1 ? 'produto' : 'produtos'})
+                                      🛒 Histórico de Compras ({customer.materials.length} {customer.materials.length === 1 ? 'produto' : 'produtos'})
                                     </div>
                                     <div className="space-y-2 max-h-40 overflow-y-auto">
                                       {customer.materials.map((material, idx) => (
