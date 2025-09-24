@@ -541,11 +541,13 @@ export async function getCustomersJourney() {
 
   data?.forEach(event => {
     try {
-      const customer = event.payload_json?.Customer
+      // Suportar tanto estrutura Kiwify quanto DMG
+      const customer = event.payload_json?.Customer || event.payload_json?.contact
       if (!customer) return
 
       // Usar CPF como identificador principal, fallback para email se não houver CPF
-      const cpf = customer.cpf?.replace(/[^\d]/g, '') || '' // Limpar formatação do CPF
+      // Suportar estruturas Kiwify e DMG
+      const cpf = (customer.cpf || customer.doc)?.replace(/[^\d]/g, '') || '' // Limpar formatação do CPF
       const email = customer.email?.toLowerCase().trim() || ''
       
       // Sempre usar email como chave principal se disponível, pois é mais consistente
@@ -559,11 +561,14 @@ export async function getCustomersJourney() {
       
       if (!primaryKey) return // Pular se não tiver identificador válido
 
-      const productName = event.payload_json?.Product?.product_name || ''
+      // Suportar estruturas Kiwify e DMG para produtos
+      const productName = event.payload_json?.Product?.product_name || event.payload_json?.product?.name || ''
       const orderDate = new Date(event.received_at)
-      const phone = customer.phone_number || ''
-      const fullName = customer.full_name || ''
+      // Suportar estruturas Kiwify e DMG para telefone e nome
+      const phone = customer.phone_number || customer.phone || ''
+      const fullName = customer.full_name || customer.name || ''
       const platformName = event.platforms?.name?.toLowerCase() || ''
+
 
       // Validar se orderDate é válido
       if (isNaN(orderDate.getTime())) return
@@ -615,10 +620,14 @@ export async function getCustomersJourney() {
       // Verificar status do pedido
       const orderPaymentStatus = event.payload_json?.order_status?.toLowerCase()
       const webhookEvent = event.payload_json?.webhook_event_type?.toLowerCase()
-      
+
+      // Para DMG: verificar status direto
+      const dmgStatus = event.payload_json?.status?.toLowerCase()
+
       // Considerar apenas pedidos pagos/aprovados
-      const isPaid = orderPaymentStatus === 'approved' || orderPaymentStatus === 'paid' || 
-                    webhookEvent?.includes('approved') || webhookEvent?.includes('paid')
+      const isPaid = orderPaymentStatus === 'approved' || orderPaymentStatus === 'paid' ||
+                    webhookEvent?.includes('approved') || webhookEvent?.includes('paid') ||
+                    dmgStatus === 'approved' || dmgStatus === 'paid'
 
       if (isPaid) {
         // DZA vem da Kiwify - detectar todas as variações
@@ -632,8 +641,8 @@ export async function getCustomersJourney() {
         }
 
         // Mentoria vem da DMG (Digital Manager) - detectar todas as variações
-        if (platformName === 'dmg' && 
-            (productName.toLowerCase().includes('mentoria individual') || 
+        if (platformName === 'dmg' &&
+            (productName.toLowerCase().includes('mentoria individual') ||
              productName.toLowerCase().includes('mentoria individual (sem material)'))) {
           if (!customerData.mentoriaDate || orderDate < new Date(customerData.mentoriaDate)) {
             customerData.mentoriaDate = orderDate.toISOString()
